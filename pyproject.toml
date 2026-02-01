@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-xardin"
+version = "0.1.0"
+description = "MCP server for garden management"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp",
+    "orgparse",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/garden_agent"]
