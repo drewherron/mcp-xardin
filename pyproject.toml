@@ -18,4 +18,4 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/garden_agent"]
+packages = ["src/xardin"]
