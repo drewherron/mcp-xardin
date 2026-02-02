@@ -12,6 +12,9 @@ dependencies = [
     "orgparse",
 ]
 
+[project.scripts]
+xardin = "xardin.server:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest",
