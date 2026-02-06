@@ -52,3 +52,63 @@ def add_plant(
     if location:
         result += f" in {location}"
     return result
+
+
+def _find_plant(conn, plant: str) -> Optional[dict]:
+    """Find a plant by ID (if numeric) or case-insensitive name match."""
+    if plant.isdigit():
+        row = conn.execute("SELECT * FROM plants WHERE id = ?", (int(plant),)).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT * FROM plants WHERE name = ? COLLATE NOCASE", (plant,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+@mcp.tool()
+def update_plant(
+    plant: str,
+    status: Optional[str] = None,
+    location: Optional[str] = None,
+    notes: Optional[str] = None,
+    species: Optional[str] = None,
+    variety: Optional[str] = None,
+    date_planted: Optional[str] = None,
+    date_removed: Optional[str] = None,
+) -> str:
+    """Update an existing plant. Identify it by name or ID."""
+    conn = get_connection()
+    existing = _find_plant(conn, plant)
+    if not existing:
+        return f"No plant found matching '{plant}'"
+
+    updates = {}
+    if status is not None:
+        updates["status"] = status
+    if location is not None:
+        updates["location_id"] = _resolve_location(conn, location)
+    if notes is not None:
+        updates["notes"] = notes
+    if species is not None:
+        updates["species"] = species
+    if variety is not None:
+        updates["variety"] = variety
+    if date_planted is not None:
+        updates["date_planted"] = date_planted
+    if date_removed is not None:
+        updates["date_removed"] = date_removed
+
+    if not updates:
+        return "Nothing to update"
+
+    # SET clause can only come from our hardcoded keys, not user input
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [existing["id"]]
+    conn.execute(
+        f"UPDATE plants SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        values,
+    )
+    conn.commit()
+
+    changed = ", ".join(f"{k}={v}" for k, v in updates.items())
+    return f"Updated '{existing['name']}': {changed}"
