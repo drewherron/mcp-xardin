@@ -26,12 +26,12 @@ CREATE TABLE IF NOT EXISTS activities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plant_id INTEGER REFERENCES plants(id),
     location_id INTEGER REFERENCES locations(id),
-    activity_type TEXT NOT NULL,
-    description TEXT NOT NULL,
+    activity_type TEXT NOT NULL,  -- planted, watered, harvested, etc.
+    description TEXT NOT NULL,    -- original natural language text
     quantity TEXT,
     timestamp TIMESTAMP NOT NULL,
-    source TEXT NOT NULL,
-    org_timestamp_key TEXT,
+    source TEXT NOT NULL,         -- 'org_sync' or 'direct_log'
+    org_timestamp_key TEXT,       -- dedup key from org-mode entries
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

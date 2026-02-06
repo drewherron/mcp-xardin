@@ -6,6 +6,7 @@ from .schema import init_db
 
 DEFAULT_DB_PATH = os.path.join("data", "garden.db")
 
+# single connection reused for the lifetime of the server
 _connection: sqlite3.Connection | None = None
 
 
@@ -18,8 +19,8 @@ def get_connection() -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     _connection = sqlite3.connect(str(db_path))
-    _connection.execute("PRAGMA journal_mode=WAL")
-    _connection.execute("PRAGMA foreign_keys=ON")
+    _connection.execute("PRAGMA journal_mode=WAL")  # better read concurrency
+    _connection.execute("PRAGMA foreign_keys=ON")   # sqlite doesn't enforce FKs by default
     _connection.row_factory = sqlite3.Row
 
     init_db(_connection)
