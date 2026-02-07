@@ -112,3 +112,38 @@ def update_plant(
 
     changed = ", ".join(f"{k}={v}" for k, v in updates.items())
     return f"Updated '{existing['name']}': {changed}"
+
+
+@mcp.tool()
+def get_plant_info(plant: str) -> str:
+    """Get details about a plant by name or ID."""
+    conn = get_connection()
+    existing = _find_plant(conn, plant)
+    if not existing:
+        return f"No plant found matching '{plant}'"
+
+    # resolve location name for display
+    location_name = None
+    if existing["location_id"]:
+        loc = conn.execute(
+            "SELECT name FROM locations WHERE id = ?", (existing["location_id"],)
+        ).fetchone()
+        if loc:
+            location_name = loc["name"]
+
+    lines = [f"# {existing['name']}"]
+    lines.append(f"Status: {existing['status']}")
+    if location_name:
+        lines.append(f"Location: {location_name}")
+    if existing["species"]:
+        lines.append(f"Species: {existing['species']}")
+    if existing["variety"]:
+        lines.append(f"Variety: {existing['variety']}")
+    if existing["date_planted"]:
+        lines.append(f"Planted: {existing['date_planted']}")
+    if existing["date_removed"]:
+        lines.append(f"Removed: {existing['date_removed']}")
+    if existing["notes"]:
+        lines.append(f"Notes: {existing['notes']}")
+
+    return "\n".join(lines)
