@@ -1,10 +1,8 @@
-import os
 import sqlite3
 from pathlib import Path
 
+from xardin.config import DB_PATH
 from .schema import init_db
-
-DEFAULT_DB_PATH = os.path.join("data", "garden.db")
 
 # single connection reused for the lifetime of the server
 _connection: sqlite3.Connection | None = None
@@ -15,7 +13,7 @@ def get_connection() -> sqlite3.Connection:
     if _connection is not None:
         return _connection
 
-    db_path = Path(os.environ.get("GARDEN_DB_PATH", DEFAULT_DB_PATH))
+    db_path = Path(DB_PATH)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     _connection = sqlite3.connect(str(db_path))
