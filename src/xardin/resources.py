@@ -37,3 +37,35 @@ def get_plants() -> str:
         lines.append(" — ".join(parts))
 
     return "\n".join(lines)
+
+
+@mcp.resource("garden://locations")
+def get_locations() -> str:
+    """All garden locations and what's currently planted in each."""
+    conn = get_connection()
+    locations = conn.execute(
+        "SELECT id, name, description FROM locations ORDER BY name"
+    ).fetchall()
+
+    if not locations:
+        return "No locations defined."
+
+    lines = []
+    for loc in locations:
+        header = loc["name"]
+        if loc["description"]:
+            header += f" — {loc['description']}"
+        lines.append(header)
+
+        plants = conn.execute(
+            "SELECT name FROM plants WHERE location_id = ? AND status = 'active'",
+            (loc["id"],),
+        ).fetchall()
+        if plants:
+            for p in plants:
+                lines.append(f"  - {p['name']}")
+        else:
+            lines.append("  (empty)")
+        lines.append("")
+
+    return "\n".join(lines).strip()
