@@ -9,7 +9,6 @@ description = "MCP server for garden management"
 requires-python = ">=3.11"
 dependencies = [
     "mcp",
-    "orgparse",
 ]
 
 [project.scripts]
