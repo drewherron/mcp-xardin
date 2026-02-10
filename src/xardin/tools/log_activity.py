@@ -59,3 +59,21 @@ def log_activity(
     if plant:
         result += f" ({plant})"
     return result
+
+
+@mcp.tool()
+def log_activities(entries: list[dict]) -> str:
+    """Log multiple activities at once. Each entry should have the same
+    fields as log_activity: activity_type, description, and optionally
+    plant, location, timestamp, quantity, possible_cause, source.
+    """
+    results = []
+    for entry in entries:
+        try:
+            r = log_activity(**entry)
+            results.append(r)
+        except Exception as e:
+            desc = entry.get("description", "?")
+            results.append(f"Error logging '{desc}': {e}")
+
+    return f"Logged {len(results)} entries:\n" + "\n".join(results)
