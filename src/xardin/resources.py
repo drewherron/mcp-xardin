@@ -69,3 +69,48 @@ def get_locations() -> str:
         lines.append("")
 
     return "\n".join(lines).strip()
+
+
+@mcp.resource("garden://recent-activity")
+def get_recent_activity() -> str:
+    """Last 30 activities and observations, most recent first."""
+    conn = get_connection()
+
+    # pull from both tables and interleave by timestamp
+    activities = conn.execute(
+        """SELECT activity_type as type, description, timestamp,
+                  p.name as plant, l.name as location
+           FROM activities a
+           LEFT JOIN plants p ON a.plant_id = p.id
+           LEFT JOIN locations l ON a.location_id = l.id
+           ORDER BY timestamp DESC LIMIT 30"""
+    ).fetchall()
+
+    observations = conn.execute(
+        """SELECT 'observed' as type, observation as description, timestamp,
+                  p.name as plant, l.name as location
+           FROM observations o
+           LEFT JOIN plants p ON o.plant_id = p.id
+           LEFT JOIN locations l ON o.location_id = l.id
+           ORDER BY timestamp DESC LIMIT 30"""
+    ).fetchall()
+
+    combined = sorted(
+        [dict(r) for r in activities] + [dict(r) for r in observations],
+        key=lambda r: r["timestamp"],
+        reverse=True,
+    )[:30]
+
+    if not combined:
+        return "No recent activity."
+
+    lines = []
+    for r in combined:
+        parts = [f"[{r['timestamp']}] {r['type']}: {r['description']}"]
+        if r["plant"]:
+            parts.append(r["plant"])
+        if r["location"]:
+            parts.append(f"in {r['location']}")
+        lines.append(" — ".join(parts))
+
+    return "\n".join(lines)
