@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS activities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plant_id INTEGER REFERENCES plants(id),
     location_id INTEGER REFERENCES locations(id),
-    activity_type TEXT NOT NULL,  -- planted, watered, harvested, etc.
+    activity_type TEXT NOT NULL,  -- planted, fertilized, harvested, moved, etc.
     description TEXT NOT NULL,    -- original natural language text
     quantity TEXT,
     timestamp TIMESTAMP NOT NULL,

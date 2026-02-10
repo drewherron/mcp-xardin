@@ -1,0 +1,61 @@
+from datetime import datetime
+from typing import Optional
+
+from xardin.server import mcp
+from xardin.db import get_connection
+from xardin.tools.manage import _find_plant, _resolve_location
+
+
+@mcp.tool()
+def log_activity(
+    activity_type: str,
+    description: str,
+    plant: Optional[str] = None,
+    location: Optional[str] = None,
+    timestamp: Optional[str] = None,
+    quantity: Optional[str] = None,
+    possible_cause: Optional[str] = None,
+    source: str = "direct_log",
+) -> str:
+    """Log a garden activity or observation.
+
+    activity_type should be one of: planted, fertilized, pruned,
+    harvested, moved, observed, treated, other.
+
+    Use 'observed' for observations (e.g. wilting, pests, flowering).
+    Set source to 'org_sync' when logging from sync_notes output.
+    """
+    conn = get_connection()
+    ts = timestamp or datetime.now().isoformat()
+
+    plant_id = None
+    if plant:
+        existing = _find_plant(conn, plant)
+        if existing:
+            plant_id = existing["id"]
+
+    location_id = None
+    if location:
+        location_id = _resolve_location(conn, location)
+
+    if activity_type == "observed":
+        conn.execute(
+            """INSERT INTO observations
+               (plant_id, location_id, observation, possible_cause, timestamp, source)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (plant_id, location_id, description, possible_cause, ts, source),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO activities
+               (plant_id, location_id, activity_type, description, quantity, timestamp, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (plant_id, location_id, activity_type, description, quantity, ts, source),
+        )
+
+    conn.commit()
+
+    result = f"Logged {activity_type}: {description}"
+    if plant:
+        result += f" ({plant})"
+    return result
