@@ -2,6 +2,7 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
+from xardin.db.queries import find_plant, resolve_location
 
 
 @mcp.tool()
@@ -16,19 +17,6 @@ def add_location(name: str, description: Optional[str] = None) -> str:
     return f"Added location '{name}' (id={cursor.lastrowid})"
 
 
-def _resolve_location(conn, location: str) -> int:
-    """Look up a location by name, creating it if it doesn't exist."""
-    row = conn.execute(
-        "SELECT id FROM locations WHERE name = ? COLLATE NOCASE", (location,)
-    ).fetchone()
-    if row:
-        return row["id"]
-    cursor = conn.execute(
-        "INSERT INTO locations (name) VALUES (?)", (location,)
-    )
-    return cursor.lastrowid
-
-
 @mcp.tool()
 def add_plant(
     name: str,
@@ -39,7 +27,7 @@ def add_plant(
 ) -> str:
     """Add a new plant to the garden. Location is matched by name or created automatically."""
     conn = get_connection()
-    location_id = _resolve_location(conn, location) if location else None
+    location_id = resolve_location(conn, location) if location else None
 
     cursor = conn.execute(
         """INSERT INTO plants (name, species, variety, date_planted, location_id, status)
@@ -52,17 +40,6 @@ def add_plant(
     if location:
         result += f" in {location}"
     return result
-
-
-def _find_plant(conn, plant: str) -> Optional[dict]:
-    """Find a plant by ID (if numeric) or case-insensitive name match."""
-    if plant.isdigit():
-        row = conn.execute("SELECT * FROM plants WHERE id = ?", (int(plant),)).fetchone()
-    else:
-        row = conn.execute(
-            "SELECT * FROM plants WHERE name = ? COLLATE NOCASE", (plant,)
-        ).fetchone()
-    return dict(row) if row else None
 
 
 @mcp.tool()
@@ -78,7 +55,7 @@ def update_plant(
 ) -> str:
     """Update an existing plant. Identify it by name or ID."""
     conn = get_connection()
-    existing = _find_plant(conn, plant)
+    existing = find_plant(conn, plant)
     if not existing:
         return f"No plant found matching '{plant}'"
 
@@ -86,7 +63,7 @@ def update_plant(
     if status is not None:
         updates["status"] = status
     if location is not None:
-        updates["location_id"] = _resolve_location(conn, location)
+        updates["location_id"] = resolve_location(conn, location)
     if notes is not None:
         updates["notes"] = notes
     if species is not None:
@@ -118,7 +95,7 @@ def update_plant(
 def get_plant_info(plant: str) -> str:
     """Get details about a plant by name or ID."""
     conn = get_connection()
-    existing = _find_plant(conn, plant)
+    existing = find_plant(conn, plant)
     if not existing:
         return f"No plant found matching '{plant}'"
 

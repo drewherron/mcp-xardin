@@ -3,7 +3,7 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
-from xardin.tools.manage import _find_plant, _resolve_location
+from xardin.db.queries import find_plant, resolve_location
 
 
 @mcp.tool()
@@ -30,13 +30,13 @@ def log_activity(
 
     plant_id = None
     if plant:
-        existing = _find_plant(conn, plant)
+        existing = find_plant(conn, plant)
         if existing:
             plant_id = existing["id"]
 
     location_id = None
     if location:
-        location_id = _resolve_location(conn, location)
+        location_id = resolve_location(conn, location)
 
     if activity_type == "observed":
         conn.execute(

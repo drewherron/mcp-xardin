@@ -78,7 +78,7 @@ def get_recent_activity() -> str:
 
     # pull from both tables and interleave by timestamp
     activities = conn.execute(
-        """SELECT activity_type as type, description, timestamp,
+        """SELECT activity_type as type, a.description, a.timestamp,
                   p.name as plant, l.name as location
            FROM activities a
            LEFT JOIN plants p ON a.plant_id = p.id
