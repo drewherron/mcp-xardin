@@ -123,4 +123,32 @@ def get_plant_info(plant: str) -> str:
     if existing["notes"]:
         lines.append(f"Notes: {existing['notes']}")
 
+    # combined timeline from both tables
+    activities = conn.execute(
+        """SELECT activity_type as type, description, timestamp
+           FROM activities WHERE plant_id = ?""",
+        (existing["id"],),
+    ).fetchall()
+    observations = conn.execute(
+        """SELECT 'observed' as type, observation as description,
+                  possible_cause, timestamp
+           FROM observations WHERE plant_id = ?""",
+        (existing["id"],),
+    ).fetchall()
+
+    history = sorted(
+        [dict(r) for r in activities] + [dict(r) for r in observations],
+        key=lambda r: r["timestamp"],
+        reverse=True,
+    )[:30]
+
+    if history:
+        lines.append("\n## History")
+        for h in history:
+            line = f"- [{h['timestamp']}] {h['type']}: {h['description']}"
+            cause = h.get("possible_cause")
+            if cause:
+                line += f" (possible cause: {cause})"
+            lines.append(line)
+
     return "\n".join(lines)
