@@ -6,6 +6,7 @@ mcp = FastMCP("xardin")
 import xardin.tools.manage  # noqa: E402, F401
 import xardin.tools.sync_notes  # noqa: E402, F401
 import xardin.tools.log_activity  # noqa: E402, F401
+import xardin.tools.query  # noqa: E402, F401
 import xardin.resources  # noqa: E402, F401
 
 
