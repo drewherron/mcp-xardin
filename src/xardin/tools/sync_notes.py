@@ -59,5 +59,9 @@ def sync_notes(file_path: str) -> str:
     if not new_entries and not updated_entries:
         return "No new or updated entries found."
 
-    parts.append("\n\nPlease interpret these entries and call log_activity for each one.")
+    parts.append(
+        "\n\nPlease interpret these entries. For any plants not already in the database, "
+        "call add_plant first. Then call log_activity (or log_activities) for each entry, "
+        "setting source='org_sync'."
+    )
     return "\n".join(parts)
