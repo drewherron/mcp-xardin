@@ -4,8 +4,12 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-# matches org timestamps like <2026-02-10 Tue 14:32>
-ORG_TIMESTAMP_RE = re.compile(r"<(\d{4}-\d{2}-\d{2} \w+ \d{2}:\d{2})>")
+# <2026-02-10 Tue 14:32> style (inline timestamps)
+ACTIVE_TS_RE = re.compile(r"<(\d{4}-\d{2}-\d{2} \w+ \d{2}:\d{2})>")
+# [2026-02-10 Tue 14:32] style (inactive, used in property drawers)
+INACTIVE_TS_RE = re.compile(r"\[(\d{4}-\d{2}-\d{2} \w+ \d{2}:\d{2})\]")
+
+PROPERTY_LINE_RE = re.compile(r"^\s*:(PROPERTIES|CREATED|END):", re.IGNORECASE)
 
 
 @dataclass
@@ -34,16 +38,33 @@ def parse_org_text(text: str) -> list[OrgEntry]:
 
         lines = chunk.split("\n")
         heading = lines[0].lstrip("* ").strip()
-        body_lines = [l for l in lines[1:] if not ORG_TIMESTAMP_RE.search(l)]
-        body = "\n".join(body_lines).strip()
 
-        # look for timestamp in any line after the heading
+        # extract timestamp — check property drawers first, then inline
         timestamp = None
         for line in lines[1:]:
-            m = ORG_TIMESTAMP_RE.search(line)
-            if m:
-                timestamp = m.group(1)
-                break
+            if ":CREATED:" in line:
+                m = INACTIVE_TS_RE.search(line) or ACTIVE_TS_RE.search(line)
+                if m:
+                    timestamp = m.group(1)
+                    break
+        if timestamp is None:
+            for line in lines[1:]:
+                m = ACTIVE_TS_RE.search(line)
+                if m:
+                    timestamp = m.group(1)
+                    break
+
+        # body is everything that isn't the heading, timestamps, or property drawer
+        body_lines = []
+        for line in lines[1:]:
+            if PROPERTY_LINE_RE.match(line):
+                continue
+            if ACTIVE_TS_RE.match(line.strip()):
+                continue
+            if INACTIVE_TS_RE.match(line.strip()):
+                continue
+            body_lines.append(line)
+        body = "\n".join(body_lines).strip()
 
         entries.append(OrgEntry(
             heading=heading,
