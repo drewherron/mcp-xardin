@@ -4,6 +4,7 @@ from xardin.tools.manage import (
     update_plant,
     get_plant_info,
 )
+from xardin.tools.log_activity import log_activity
 
 
 def test_add_location(db):
@@ -97,3 +98,24 @@ def test_get_plant_info_by_id(db):
     add_plant("basil")
     result = get_plant_info("1")
     assert "basil" in result
+
+
+def test_get_plant_info_with_history(db):
+    add_plant("basil", location="porch")
+    log_activity("planted", "Planted basil", plant="basil", timestamp="2026-02-10T10:00:00")
+    log_activity("observed", "Looking wilted", plant="basil", timestamp="2026-02-11T17:00:00",
+                 possible_cause="overwatering")
+    log_activity("fertilized", "Fish emulsion", plant="basil", timestamp="2026-02-12T09:00:00")
+
+    result = get_plant_info("basil")
+    assert "History" in result
+    assert "planted" in result
+    assert "observed" in result
+    assert "fertilized" in result
+    assert "overwatering" in result
+
+    # should be in reverse chronological order
+    fert_pos = result.index("fertilized")
+    obs_pos = result.index("observed")
+    plant_pos = result.index("planted")
+    assert fert_pos < obs_pos < plant_pos
