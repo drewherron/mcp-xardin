@@ -5,13 +5,13 @@ from xardin.tools.query import execute_query
 def test_select_query(db):
     add_plant("tomatoes", location="raised bed")
     add_plant("basil", location="porch")
-    result = execute_query("SELECT name, status FROM plants")
+    result = execute_query("SELECT name, active FROM plants")
     assert "tomatoes" in result
     assert "basil" in result
 
 
 def test_rejects_insert(db):
-    result = execute_query("INSERT INTO plants (name, status) VALUES ('x', 'active')")
+    result = execute_query("INSERT INTO plants (name, active) VALUES ('x', 1)")
     assert "only SELECT" in result
 
 
@@ -26,7 +26,7 @@ def test_rejects_delete(db):
 
 
 def test_rejects_update(db):
-    result = execute_query("UPDATE plants SET status = 'dead'")
+    result = execute_query("UPDATE plants SET active = 0")
     assert "only SELECT" in result
 
 

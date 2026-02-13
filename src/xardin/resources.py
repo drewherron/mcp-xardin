@@ -14,11 +14,11 @@ def get_plants() -> str:
     """Summary of all active plants in the garden."""
     conn = get_connection()
     rows = conn.execute(
-        """SELECT p.name, p.status, p.date_planted, p.species, p.variety,
+        """SELECT p.name, p.date_planted, p.species, p.variety,
                   l.name as location
            FROM plants p
            LEFT JOIN locations l ON p.location_id = l.id
-           WHERE p.status = 'active'
+           WHERE p.active = 1
            ORDER BY p.date_planted"""
     ).fetchall()
 
@@ -58,7 +58,7 @@ def get_locations() -> str:
         lines.append(header)
 
         plants = conn.execute(
-            "SELECT name FROM plants WHERE location_id = ? AND status = 'active'",
+            "SELECT name FROM plants WHERE location_id = ? AND active = 1",
             (loc["id"],),
         ).fetchall()
         if plants:

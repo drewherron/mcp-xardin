@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS plants (
     date_planted DATE,
     date_removed DATE,
     location_id INTEGER REFERENCES locations(id),
-    status TEXT NOT NULL DEFAULT 'active',
+    active INTEGER NOT NULL DEFAULT 1,  -- 1 = currently in ground, 0 = removed
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

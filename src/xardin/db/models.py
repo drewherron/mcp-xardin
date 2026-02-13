@@ -29,7 +29,7 @@ class Plant:
     date_planted: Optional[str] = None
     date_removed: Optional[str] = None
     location_id: Optional[int] = None
-    status: str = "active"
+    active: int = 1
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

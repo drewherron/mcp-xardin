@@ -30,7 +30,7 @@ def test_add_plant_basic(db):
 
     row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
     assert row["name"] == "cherry tomatoes"
-    assert row["status"] == "active"
+    assert row["active"] == 1
 
 
 def test_add_plant_with_location(db):
@@ -57,11 +57,11 @@ def test_add_plant_reuses_existing_location(db):
 
 def test_update_plant(db):
     add_plant("basil")
-    result = update_plant("basil", status="dead", notes="dried out")
+    result = update_plant("basil", active=False, notes="dried out")
     assert "Updated" in result
 
     row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
-    assert row["status"] == "dead"
+    assert row["active"] == 0
     assert row["notes"] == "dried out"
 
 

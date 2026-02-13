@@ -30,8 +30,8 @@ def add_plant(
     location_id = resolve_location(conn, location) if location else None
 
     cursor = conn.execute(
-        """INSERT INTO plants (name, species, variety, date_planted, location_id, status)
-           VALUES (?, ?, ?, ?, ?, 'active')""",
+        """INSERT INTO plants (name, species, variety, date_planted, location_id, active)
+           VALUES (?, ?, ?, ?, ?, 1)""",
         (name, species, variety, date_planted, location_id),
     )
     conn.commit()
@@ -45,7 +45,7 @@ def add_plant(
 @mcp.tool()
 def update_plant(
     plant: str,
-    status: Optional[str] = None,
+    active: Optional[bool] = None,
     location: Optional[str] = None,
     notes: Optional[str] = None,
     species: Optional[str] = None,
@@ -60,8 +60,8 @@ def update_plant(
         return f"No plant found matching '{plant}'"
 
     updates = {}
-    if status is not None:
-        updates["status"] = status
+    if active is not None:
+        updates["active"] = 1 if active else 0
     if location is not None:
         updates["location_id"] = resolve_location(conn, location)
     if notes is not None:
@@ -109,7 +109,7 @@ def get_plant_info(plant: str) -> str:
             location_name = loc["name"]
 
     lines = [f"# {existing['name']}"]
-    lines.append(f"Status: {existing['status']}")
+    lines.append(f"Active: {bool(existing['active'])}")
     if location_name:
         lines.append(f"Location: {location_name}")
     if existing["species"]:
