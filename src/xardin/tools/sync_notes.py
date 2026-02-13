@@ -1,3 +1,5 @@
+import os
+
 from xardin.server import mcp
 from xardin.db import get_connection
 from xardin.ingestion.org_parser import parse_org_file
@@ -12,6 +14,9 @@ def sync_notes(file_path: str) -> str:
     should interpret each entry (identify plants, activities, locations)
     and call log_activity for each one.
     """
+    if not os.path.exists(file_path):
+        return f"File not found: {file_path}"
+
     conn = get_connection()
     entries = parse_org_file(file_path)
 
