@@ -3,7 +3,7 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
-from xardin.db.queries import find_plant, resolve_location
+from xardin.db.queries import find_plant, search_plants, resolve_location
 
 
 @mcp.tool()
@@ -29,10 +29,13 @@ def log_activity(
     ts = timestamp or datetime.now().isoformat()
 
     plant_id = None
+    ambiguous = False
     if plant:
         existing = find_plant(conn, plant)
         if existing:
             plant_id = existing["id"]
+        elif len(search_plants(conn, plant)) > 1:
+            ambiguous = True
 
     location_id = None
     if location:
@@ -58,6 +61,8 @@ def log_activity(
     result = f"Logged {activity_type}: {description}"
     if plant:
         result += f" ({plant})"
+    if ambiguous:
+        result += f" — note: '{plant}' matched multiple plants, logged without plant link"
     return result
 
 

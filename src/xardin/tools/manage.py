@@ -2,7 +2,7 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
-from xardin.db.queries import find_plant, resolve_location
+from xardin.db.queries import find_plant, search_plants, resolve_location
 
 
 @mcp.tool()
@@ -57,6 +57,10 @@ def update_plant(
     conn = get_connection()
     existing = find_plant(conn, plant)
     if not existing:
+        matches = search_plants(conn, plant)
+        if matches:
+            names = ", ".join(m["name"] for m in matches)
+            return f"Ambiguous: '{plant}' matches multiple plants: {names}"
         return f"No plant found matching '{plant}'"
 
     updates = {}
@@ -97,6 +101,10 @@ def get_plant_info(plant: str) -> str:
     conn = get_connection()
     existing = find_plant(conn, plant)
     if not existing:
+        matches = search_plants(conn, plant)
+        if matches:
+            names = ", ".join(m["name"] for m in matches)
+            return f"Ambiguous: '{plant}' matches multiple plants: {names}"
         return f"No plant found matching '{plant}'"
 
     # resolve location name for display

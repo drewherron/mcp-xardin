@@ -4,14 +4,32 @@ from typing import Optional
 
 
 def find_plant(conn, plant: str) -> Optional[dict]:
-    """Find a plant by ID (if numeric) or case-insensitive name match."""
+    """Find a plant by ID (if numeric) or case-insensitive name match.
+    Falls back to partial match if no exact match found.
+    Returns None if no match or if multiple partial matches (ambiguous).
+    """
     if plant.isdigit():
         row = conn.execute("SELECT * FROM plants WHERE id = ?", (int(plant),)).fetchone()
-    else:
-        row = conn.execute(
-            "SELECT * FROM plants WHERE name = ? COLLATE NOCASE", (plant,)
-        ).fetchone()
-    return dict(row) if row else None
+        return dict(row) if row else None
+
+    row = conn.execute(
+        "SELECT * FROM plants WHERE name = ? COLLATE NOCASE", (plant,)
+    ).fetchone()
+    if row:
+        return dict(row)
+
+    # fall back to partial match
+    matches = search_plants(conn, plant)
+    return matches[0] if len(matches) == 1 else None
+
+
+def search_plants(conn, query: str) -> list[dict]:
+    """Partial name search — returns all active plants whose name contains query."""
+    rows = conn.execute(
+        "SELECT * FROM plants WHERE name LIKE ? COLLATE NOCASE AND active = 1",
+        (f"%{query}%",),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def resolve_location(conn, location: str) -> int:
