@@ -24,6 +24,10 @@ def log_activity(
 
     Use 'observed' for observations (e.g. wilting, pests, flowering).
     Set source to 'org_sync' when logging from sync_notes output.
+
+    If the activity implies a plant is finished (died, pulled out, or
+    final harvest of a once-and-done crop like carrots or garlic), also
+    call update_plant with active=false for that plant.
     """
     conn = get_connection()
     ts = timestamp or datetime.now().isoformat()
