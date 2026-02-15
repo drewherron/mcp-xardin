@@ -25,7 +25,7 @@ def check_entry(conn, timestamp: str, raw: str) -> str:
     return "updated"
 
 
-def record_sync(conn, timestamp: str, raw: str, status: str = "success"):
+def record_sync(conn, timestamp: str, raw: str):
     """Insert or update the sync log for an entry."""
     h = content_hash(raw)
     existing = conn.execute(
@@ -34,11 +34,11 @@ def record_sync(conn, timestamp: str, raw: str, status: str = "success"):
 
     if existing:
         conn.execute(
-            "UPDATE sync_log SET content_hash = ?, synced_at = CURRENT_TIMESTAMP, status = ? WHERE id = ?",
-            (h, status, existing["id"]),
+            "UPDATE sync_log SET content_hash = ?, synced_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (h, existing["id"]),
         )
     else:
         conn.execute(
-            "INSERT INTO sync_log (org_timestamp, content_hash, status) VALUES (?, ?, ?)",
-            (timestamp, h, status),
+            "INSERT INTO sync_log (org_timestamp, content_hash) VALUES (?, ?)",
+            (timestamp, h),
         )
