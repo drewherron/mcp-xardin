@@ -1,4 +1,4 @@
-from xardin.tools.manage import add_location, add_plant
+from xardin.tools.manage import add_location, update_location, add_plant
 from xardin.resources import get_schema, get_plants, get_locations
 
 
@@ -36,3 +36,24 @@ def test_locations_resource(db):
     assert "basil" in result
     assert "empty spot" in result
     assert "(empty)" in result
+
+
+def test_locations_resource_hides_inactive(db):
+    add_location("old bed")
+    update_location("old bed", active=False)
+    add_location("current bed")
+    result = get_locations()
+    assert "old bed" not in result
+    assert "current bed" in result
+
+
+def test_locations_resource_with_attributes(db):
+    add_location("raised bed A")
+    add_location("raised bed B")
+    update_location("raised bed A", sun_exposure="full sun", size="4x8 ft",
+                    notes="South-facing", adjacent_to=["raised bed B"])
+    result = get_locations()
+    assert "full sun" in result
+    assert "4x8 ft" in result
+    assert "South-facing" in result
+    assert "Adjacent to: raised bed B" in result

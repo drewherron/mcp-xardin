@@ -1,5 +1,6 @@
 from xardin.tools.manage import (
     add_location,
+    update_location,
     add_plant,
     update_plant,
     get_plant_info,
@@ -22,6 +23,67 @@ def test_add_location_with_description(db):
 
     row = db.execute("SELECT * FROM locations WHERE id = 1").fetchone()
     assert row["description"] == "south-facing, covered"
+
+
+def test_update_location_attributes(db):
+    add_location("raised bed A")
+    result = update_location("raised bed A", sun_exposure="full sun", size="4x8 ft")
+    assert "Updated" in result
+
+    row = db.execute("SELECT * FROM locations WHERE name = 'raised bed A'").fetchone()
+    assert row["sun_exposure"] == "full sun"
+    assert row["size"] == "4x8 ft"
+
+
+def test_update_location_notes(db):
+    add_location("raised bed C")
+    result = update_location("raised bed C", notes="Against north fence, short end faces bed B")
+    assert "Updated" in result
+
+    row = db.execute("SELECT * FROM locations WHERE name = 'raised bed C'").fetchone()
+    assert "north fence" in row["notes"]
+
+
+def test_update_location_adjacency(db):
+    add_location("raised bed A")
+    add_location("raised bed B")
+    result = update_location("raised bed A", adjacent_to=["raised bed B"])
+    assert "adjacent_to" in result
+
+    a = db.execute("SELECT id FROM locations WHERE name = 'raised bed A'").fetchone()
+    b = db.execute("SELECT id FROM locations WHERE name = 'raised bed B'").fetchone()
+
+    link = db.execute(
+        "SELECT * FROM location_adjacency WHERE location_id = ? AND adjacent_id = ?",
+        (a["id"], b["id"]),
+    ).fetchone()
+    assert link is not None
+
+    # link is symmetric
+    reverse = db.execute(
+        "SELECT * FROM location_adjacency WHERE location_id = ? AND adjacent_id = ?",
+        (b["id"], a["id"]),
+    ).fetchone()
+    assert reverse is not None
+
+
+def test_update_location_adjacency_is_additive(db):
+    add_location("bed A")
+    add_location("bed B")
+    add_location("bed C")
+    update_location("bed A", adjacent_to=["bed B"])
+    update_location("bed A", adjacent_to=["bed C"])
+
+    a = db.execute("SELECT id FROM locations WHERE name = 'bed A'").fetchone()
+    links = db.execute(
+        "SELECT * FROM location_adjacency WHERE location_id = ?", (a["id"],)
+    ).fetchall()
+    assert len(links) == 2
+
+
+def test_update_location_not_found(db):
+    result = update_location("nonexistent", sun_exposure="full sun")
+    assert "No location found" in result
 
 
 def test_add_plant_basic(db):
