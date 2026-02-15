@@ -1,6 +1,16 @@
 from xardin.server import mcp
 from xardin.db import get_connection
 from xardin.db.schema import SCHEMA
+from xardin.config import GROWING_ZONE, REGION
+
+
+@mcp.resource("garden://context")
+def get_context() -> str:
+    """Static garden configuration: growing zone and region."""
+    lines = [f"Growing zone: {GROWING_ZONE}"]
+    if REGION:
+        lines.append(f"Region: {REGION}")
+    return "\n".join(lines)
 
 
 @mcp.resource("garden://schema")

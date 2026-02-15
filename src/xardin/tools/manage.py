@@ -9,6 +9,17 @@ from xardin.db.queries import find_plant, search_plants, resolve_location, add_a
 def add_location(name: str, description: Optional[str] = None) -> str:
     """Add a new garden location (e.g. 'raised bed', 'porch containers')."""
     conn = get_connection()
+
+    existing = conn.execute(
+        "SELECT id, active FROM locations WHERE name = ? COLLATE NOCASE", (name,)
+    ).fetchone()
+    if existing:
+        if not existing["active"]:
+            conn.execute("UPDATE locations SET active = 1 WHERE id = ?", (existing["id"],))
+            conn.commit()
+            return f"Reactivated location '{name}' (id={existing['id']})"
+        return f"Location '{name}' already exists (id={existing['id']})"
+
     cursor = conn.execute(
         "INSERT INTO locations (name, description) VALUES (?, ?)",
         (name, description),
