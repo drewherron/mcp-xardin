@@ -44,7 +44,7 @@ def get_locations() -> str:
     """All garden locations and what's currently planted in each."""
     conn = get_connection()
     locations = conn.execute(
-        "SELECT id, name, description FROM locations ORDER BY name"
+        "SELECT id, name, description, sun_exposure, size, notes FROM locations ORDER BY name"
     ).fetchall()
 
     if not locations:
@@ -52,10 +52,30 @@ def get_locations() -> str:
 
     lines = []
     for loc in locations:
+        attrs = []
+        if loc["sun_exposure"]:
+            attrs.append(loc["sun_exposure"])
+        if loc["size"]:
+            attrs.append(loc["size"])
         header = loc["name"]
+        if attrs:
+            header += f" ({', '.join(attrs)})"
         if loc["description"]:
             header += f" — {loc['description']}"
         lines.append(header)
+
+        if loc["notes"]:
+            lines.append(f"  Notes: {loc['notes']}")
+
+        adjacent = conn.execute(
+            """SELECT l.name FROM locations l
+               JOIN location_adjacency a ON l.id = a.adjacent_id
+               WHERE a.location_id = ?
+               ORDER BY l.name""",
+            (loc["id"],),
+        ).fetchall()
+        if adjacent:
+            lines.append(f"  Adjacent to: {', '.join(r['name'] for r in adjacent)}")
 
         plants = conn.execute(
             "SELECT name FROM plants WHERE location_id = ? AND active = 1",

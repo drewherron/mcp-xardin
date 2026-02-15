@@ -5,7 +5,16 @@ CREATE TABLE IF NOT EXISTS locations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT,
+    sun_exposure TEXT,   -- e.g. 'full sun', 'partial shade', 'full shade'
+    size TEXT,           -- e.g. '4x8 ft'
+    notes TEXT,          -- free-form spatial or soil notes
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS location_adjacency (
+    location_id INTEGER NOT NULL REFERENCES locations(id),
+    adjacent_id INTEGER NOT NULL REFERENCES locations(id),
+    PRIMARY KEY (location_id, adjacent_id)
 );
 
 CREATE TABLE IF NOT EXISTS plants (

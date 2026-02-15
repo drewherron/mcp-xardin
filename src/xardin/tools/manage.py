@@ -2,7 +2,7 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
-from xardin.db.queries import find_plant, search_plants, resolve_location
+from xardin.db.queries import find_plant, search_plants, resolve_location, add_adjacency
 
 
 @mcp.tool()
@@ -15,6 +15,68 @@ def add_location(name: str, description: Optional[str] = None) -> str:
     )
     conn.commit()
     return f"Added location '{name}' (id={cursor.lastrowid})"
+
+
+@mcp.tool()
+def update_location(
+    location: str,
+    sun_exposure: Optional[str] = None,
+    size: Optional[str] = None,
+    notes: Optional[str] = None,
+    adjacent_to: Optional[list[str]] = None,
+) -> str:
+    """Update a garden location's attributes or adjacency links.
+
+    sun_exposure: e.g. 'full sun', 'partial shade', 'full shade'
+    size: e.g. '4x8 ft'
+    notes: free-form spatial or soil notes
+    adjacent_to: location names near this one (additive; links are not removed)
+    """
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT id, name FROM locations WHERE name = ? COLLATE NOCASE", (location,)
+    ).fetchone()
+    if not row:
+        return f"No location found matching '{location}'"
+
+    loc_id = row["id"]
+    loc_name = row["name"]
+    changed = []
+
+    updates = {}
+    if sun_exposure is not None:
+        updates["sun_exposure"] = sun_exposure
+    if size is not None:
+        updates["size"] = size
+    if notes is not None:
+        updates["notes"] = notes
+
+    if updates:
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [loc_id]
+        conn.execute(f"UPDATE locations SET {set_clause} WHERE id = ?", values)
+        changed.extend(f"{k}={v}" for k, v in updates.items())
+
+    if adjacent_to:
+        linked = []
+        for name in adjacent_to:
+            adj_row = conn.execute(
+                "SELECT id, name FROM locations WHERE name = ? COLLATE NOCASE", (name,)
+            ).fetchone()
+            if adj_row:
+                add_adjacency(conn, loc_id, adj_row["id"])
+                linked.append(adj_row["name"])
+            else:
+                cursor = conn.execute("INSERT INTO locations (name) VALUES (?)", (name,))
+                add_adjacency(conn, loc_id, cursor.lastrowid)
+                linked.append(name)
+        changed.append(f"adjacent_to=[{', '.join(linked)}]")
+
+    if not changed:
+        return "Nothing to update"
+
+    conn.commit()
+    return f"Updated '{loc_name}': {', '.join(changed)}"
 
 
 @mcp.tool()

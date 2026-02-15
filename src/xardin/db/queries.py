@@ -32,6 +32,18 @@ def search_plants(conn, query: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def add_adjacency(conn, location_id: int, adjacent_id: int):
+    """Create a symmetric adjacency link between two locations."""
+    conn.execute(
+        "INSERT OR IGNORE INTO location_adjacency (location_id, adjacent_id) VALUES (?, ?)",
+        (location_id, adjacent_id),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO location_adjacency (location_id, adjacent_id) VALUES (?, ?)",
+        (adjacent_id, location_id),
+    )
+
+
 def resolve_location(conn, location: str) -> int:
     """Look up a location by name, creating it if it doesn't exist."""
     row = conn.execute(
