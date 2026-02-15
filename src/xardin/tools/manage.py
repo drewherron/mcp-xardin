@@ -20,6 +20,7 @@ def add_location(name: str, description: Optional[str] = None) -> str:
 @mcp.tool()
 def update_location(
     location: str,
+    active: Optional[bool] = None,
     sun_exposure: Optional[str] = None,
     size: Optional[str] = None,
     notes: Optional[str] = None,
@@ -27,6 +28,8 @@ def update_location(
 ) -> str:
     """Update a garden location's attributes or adjacency links.
 
+    active: set to false to retire a location (hides it from the AI without
+            deleting historical data)
     sun_exposure: e.g. 'full sun', 'partial shade', 'full shade'
     size: e.g. '4x8 ft'
     notes: free-form spatial or soil notes
@@ -44,6 +47,8 @@ def update_location(
     changed = []
 
     updates = {}
+    if active is not None:
+        updates["active"] = 1 if active else 0
     if sun_exposure is not None:
         updates["sun_exposure"] = sun_exposure
     if size is not None:

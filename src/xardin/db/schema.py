@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS locations (
     sun_exposure TEXT,   -- e.g. 'full sun', 'partial shade', 'full shade'
     size TEXT,           -- e.g. '4x8 ft'
     notes TEXT,          -- free-form spatial or soil notes
+    active INTEGER NOT NULL DEFAULT 1,  -- 0 = removed/no longer in use
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
