@@ -1,5 +1,10 @@
 from xardin.tools.manage import add_location, update_location, add_plant
-from xardin.resources import get_schema, get_plants, get_locations
+from xardin.resources import get_context, get_schema, get_plants, get_locations
+
+
+def test_context_resource(db):
+    result = get_context()
+    assert "Growing zone" in result
 
 
 def test_schema_resource(db):

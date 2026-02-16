@@ -25,6 +25,22 @@ def test_add_location_with_description(db):
     assert row["description"] == "south-facing, covered"
 
 
+def test_add_location_reactivates_inactive(db):
+    add_location("pot 5")
+    update_location("pot 5", active=False)
+    result = add_location("pot 5")
+    assert "Reactivated" in result
+
+    row = db.execute("SELECT active FROM locations WHERE name = 'pot 5'").fetchone()
+    assert row["active"] == 1
+
+
+def test_add_location_already_exists(db):
+    add_location("raised bed")
+    result = add_location("raised bed")
+    assert "already exists" in result
+
+
 def test_update_location_attributes(db):
     add_location("raised bed A")
     result = update_location("raised bed A", sun_exposure="full sun", size="4x8 ft")
@@ -106,6 +122,16 @@ def test_add_plant_with_location(db):
 
     plant = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
     assert plant["location_id"] == loc["id"]
+
+
+def test_add_plant_reactivates_inactive_location(db):
+    add_location("pot 5")
+    update_location("pot 5", active=False)
+    # adding a plant to an inactive location should reactivate it
+    add_plant("mint", location="pot 5")
+
+    row = db.execute("SELECT active FROM locations WHERE name = 'pot 5'").fetchone()
+    assert row["active"] == 1
 
 
 def test_add_plant_reuses_existing_location(db):
