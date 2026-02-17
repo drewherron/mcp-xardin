@@ -25,14 +25,16 @@ def test_add_location_with_description(db):
     assert row["description"] == "south-facing, covered"
 
 
-def test_add_location_reactivates_inactive(db):
+def test_add_location_creates_new_after_inactive(db):
     add_location("pot 5")
     update_location("pot 5", active=False)
     result = add_location("pot 5")
-    assert "Reactivated" in result
+    assert "Added" in result
 
-    row = db.execute("SELECT active FROM locations WHERE name = 'pot 5'").fetchone()
-    assert row["active"] == 1
+    rows = db.execute("SELECT * FROM locations WHERE name = 'pot 5'").fetchall()
+    assert len(rows) == 2
+    active = [r for r in rows if r["active"] == 1]
+    assert len(active) == 1
 
 
 def test_add_location_already_exists(db):
@@ -99,7 +101,7 @@ def test_update_location_adjacency_is_additive(db):
 
 def test_update_location_not_found(db):
     result = update_location("nonexistent", sun_exposure="full sun")
-    assert "No location found" in result
+    assert "No active location found" in result
 
 
 def test_add_plant_basic(db):
@@ -124,14 +126,16 @@ def test_add_plant_with_location(db):
     assert plant["location_id"] == loc["id"]
 
 
-def test_add_plant_reactivates_inactive_location(db):
+def test_add_plant_creates_new_location_when_inactive(db):
     add_location("pot 5")
     update_location("pot 5", active=False)
-    # adding a plant to an inactive location should reactivate it
+    # adding a plant to a name with no active location creates a fresh one
     add_plant("mint", location="pot 5")
 
-    row = db.execute("SELECT active FROM locations WHERE name = 'pot 5'").fetchone()
-    assert row["active"] == 1
+    rows = db.execute("SELECT * FROM locations WHERE name = 'pot 5'").fetchall()
+    assert len(rows) == 2
+    active = [r for r in rows if r["active"] == 1]
+    assert len(active) == 1
 
 
 def test_add_plant_reuses_existing_location(db):

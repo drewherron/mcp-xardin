@@ -45,17 +45,11 @@ def add_adjacency(conn, location_id: int, adjacent_id: int):
 
 
 def resolve_location(conn, location: str) -> int:
-    """Look up a location by name, creating it if it doesn't exist.
-
-    If the location exists but is inactive, reactivates it — supports
-    reusing location names across seasons.
-    """
+    """Look up an active location by name, creating a new one if none exists."""
     row = conn.execute(
-        "SELECT id, active FROM locations WHERE name = ? COLLATE NOCASE", (location,)
+        "SELECT id FROM locations WHERE name = ? COLLATE NOCASE AND active = 1", (location,)
     ).fetchone()
     if row:
-        if not row["active"]:
-            conn.execute("UPDATE locations SET active = 1 WHERE id = ?", (row["id"],))
         return row["id"]
     cursor = conn.execute(
         "INSERT INTO locations (name) VALUES (?)", (location,)

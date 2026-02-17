@@ -3,7 +3,7 @@ import sqlite3
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS locations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     description TEXT,
     sun_exposure TEXT,   -- e.g. 'full sun', 'partial shade', 'full shade'
     size TEXT,           -- e.g. '4x8 ft'

@@ -11,13 +11,9 @@ def add_location(name: str, description: Optional[str] = None) -> str:
     conn = get_connection()
 
     existing = conn.execute(
-        "SELECT id, active FROM locations WHERE name = ? COLLATE NOCASE", (name,)
+        "SELECT id FROM locations WHERE name = ? COLLATE NOCASE AND active = 1", (name,)
     ).fetchone()
     if existing:
-        if not existing["active"]:
-            conn.execute("UPDATE locations SET active = 1 WHERE id = ?", (existing["id"],))
-            conn.commit()
-            return f"Reactivated location '{name}' (id={existing['id']})"
         return f"Location '{name}' already exists (id={existing['id']})"
 
     cursor = conn.execute(
@@ -48,10 +44,11 @@ def update_location(
     """
     conn = get_connection()
     row = conn.execute(
-        "SELECT id, name FROM locations WHERE name = ? COLLATE NOCASE", (location,)
+        "SELECT id, name FROM locations WHERE name = ? COLLATE NOCASE AND active = 1",
+        (location,),
     ).fetchone()
     if not row:
-        return f"No location found matching '{location}'"
+        return f"No active location found matching '{location}'"
 
     loc_id = row["id"]
     loc_name = row["name"]
