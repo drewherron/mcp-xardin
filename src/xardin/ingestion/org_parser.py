@@ -49,7 +49,7 @@ def parse_org_text(text: str) -> list[OrgEntry]:
                     break
         if timestamp is None:
             for line in lines[1:]:
-                m = ACTIVE_TS_RE.search(line)
+                m = ACTIVE_TS_RE.search(line) or INACTIVE_TS_RE.search(line)
                 if m:
                     timestamp = m.group(1)
                     break

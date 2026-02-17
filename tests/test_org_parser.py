@@ -70,6 +70,14 @@ def test_body_excludes_inline_timestamp():
     assert "Leaves are drooping" in entries[2].body
 
 
+def test_inline_inactive_timestamp():
+    # C-c ! in org-mode produces an inactive [timestamp] inline
+    text = "* Fertilized the tomatoes\n  [2026-02-10 Tue 14:32]\n"
+    entries = parse_org_text(text)
+    assert entries[0].timestamp == "2026-02-10 Tue 14:32"
+    assert entries[0].body == ""
+
+
 def test_entry_without_timestamp():
     text = "* Just a note with no timestamp\n  some body text\n"
     entries = parse_org_text(text)
