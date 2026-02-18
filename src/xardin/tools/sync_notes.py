@@ -66,9 +66,11 @@ def sync_notes(file_path: str) -> str:
 
     parts.append(
         "\n\nPlease interpret these entries. For any plants not already in the database, "
-        "call add_plant first. Then call log_activity (or log_activities) for each entry, "
-        "setting source='org_sync'. If any entries indicate that plants were removed, "
-        "pulled out, died, or were fully harvested (once-and-done crops like carrots or "
-        "garlic), also call update_plant with active=false for those plants."
+        "call add_plant first (including species and variety if mentioned), then call "
+        "add_planting for each location group (with quantity if known). Then call "
+        "log_activity (or log_activities) for each entry, setting source='org_sync'. "
+        "If any entries indicate that plants were removed, pulled out, died, or were "
+        "fully harvested (once-and-done crops like carrots or garlic), also call "
+        "update_planting with active=false for those plantings."
     )
     return "\n".join(parts)

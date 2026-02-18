@@ -4,7 +4,7 @@ from typing import Optional
 
 
 def find_plant(conn, plant: str) -> Optional[dict]:
-    """Find a plant by ID (if numeric) or case-insensitive name match.
+    """Find a plant type by ID (if numeric) or case-insensitive name match.
     Falls back to partial match if no exact match found.
     Returns None if no match or if multiple partial matches (ambiguous).
     """
@@ -18,16 +18,57 @@ def find_plant(conn, plant: str) -> Optional[dict]:
     if row:
         return dict(row)
 
-    # fall back to partial match
     matches = search_plants(conn, plant)
     return matches[0] if len(matches) == 1 else None
 
 
 def search_plants(conn, query: str) -> list[dict]:
-    """Partial name search — returns all active plants whose name contains query."""
+    """Partial name search — returns plant types whose name contains query."""
     rows = conn.execute(
-        "SELECT * FROM plants WHERE name LIKE ? COLLATE NOCASE AND active = 1",
+        "SELECT * FROM plants WHERE name LIKE ? COLLATE NOCASE",
         (f"%{query}%",),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def find_planting(conn, plant: str, location: str = None) -> Optional[dict]:
+    """Find an active planting by plant name and optional location.
+
+    If location is omitted, returns the single active planting if unambiguous.
+    Returns None if the plant isn't found, the planting isn't found, or if
+    multiple active plantings exist and no location was given.
+    """
+    plant_row = find_plant(conn, plant)
+    if not plant_row:
+        return None
+
+    if location:
+        loc = conn.execute(
+            "SELECT id FROM locations WHERE name = ? COLLATE NOCASE AND active = 1",
+            (location,),
+        ).fetchone()
+        if not loc:
+            return None
+        row = conn.execute(
+            "SELECT * FROM plantings WHERE plant_id = ? AND location_id = ? AND active = 1",
+            (plant_row["id"], loc["id"]),
+        ).fetchone()
+        return dict(row) if row else None
+
+    rows = conn.execute(
+        "SELECT * FROM plantings WHERE plant_id = ? AND active = 1",
+        (plant_row["id"],),
+    ).fetchall()
+    return dict(rows[0]) if len(rows) == 1 else None
+
+
+def search_plantings(conn, plant: str) -> list[dict]:
+    """Return all active plantings for plants whose name contains query."""
+    rows = conn.execute(
+        """SELECT pt.* FROM plantings pt
+           JOIN plants p ON pt.plant_id = p.id
+           WHERE p.name LIKE ? COLLATE NOCASE AND pt.active = 1""",
+        (f"%{plant}%",),
     ).fetchall()
     return [dict(r) for r in rows]
 

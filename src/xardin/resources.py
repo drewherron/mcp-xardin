@@ -21,32 +21,52 @@ def get_schema() -> str:
 
 @mcp.resource("garden://plants")
 def get_plants() -> str:
-    """Summary of all active plants in the garden."""
+    """All plant types that have at least one active planting, with planting details."""
     conn = get_connection()
-    rows = conn.execute(
-        """SELECT p.name, p.date_planted, p.species, p.variety,
-                  l.name as location
+
+    # get plant types with active plantings
+    plants = conn.execute(
+        """SELECT DISTINCT p.id, p.name, p.species, p.variety
            FROM plants p
-           LEFT JOIN locations l ON p.location_id = l.id
-           WHERE p.active = 1
-           ORDER BY p.date_planted"""
+           JOIN plantings pt ON pt.plant_id = p.id
+           WHERE pt.active = 1
+           ORDER BY p.name"""
     ).fetchall()
 
-    if not rows:
+    if not plants:
         return "No active plants."
 
     lines = []
-    for r in rows:
-        parts = [r["name"]]
-        if r["variety"]:
-            parts[0] += f" ({r['variety']})"
-        if r["location"]:
-            parts.append(f"in {r['location']}")
-        if r["date_planted"]:
-            parts.append(f"planted {r['date_planted']}")
-        lines.append(" — ".join(parts))
+    for p in plants:
+        header = p["name"]
+        if p["variety"]:
+            header += f" ({p['variety']})"
+        elif p["species"]:
+            header += f" ({p['species']})"
+        lines.append(header)
 
-    return "\n".join(lines)
+        plantings = conn.execute(
+            """SELECT pt.quantity, pt.date_planted, l.name as location
+               FROM plantings pt
+               LEFT JOIN locations l ON pt.location_id = l.id
+               WHERE pt.plant_id = ? AND pt.active = 1
+               ORDER BY pt.date_planted""",
+            (p["id"],),
+        ).fetchall()
+
+        for pt in plantings:
+            parts = [" -"]
+            if pt["location"]:
+                parts.append(pt["location"])
+            if pt["quantity"]:
+                parts.append(f"{pt['quantity']} plants")
+            if pt["date_planted"]:
+                parts.append(f"planted {pt['date_planted']}")
+            lines.append(" ".join(parts))
+
+        lines.append("")
+
+    return "\n".join(lines).strip()
 
 
 @mcp.resource("garden://locations")
@@ -88,13 +108,21 @@ def get_locations() -> str:
         if adjacent:
             lines.append(f"  Adjacent to: {', '.join(r['name'] for r in adjacent)}")
 
-        plants = conn.execute(
-            "SELECT name FROM plants WHERE location_id = ? AND active = 1",
+        plantings = conn.execute(
+            """SELECT p.name, p.variety, pt.quantity
+               FROM plantings pt
+               JOIN plants p ON pt.plant_id = p.id
+               WHERE pt.location_id = ? AND pt.active = 1""",
             (loc["id"],),
         ).fetchall()
-        if plants:
-            for p in plants:
-                lines.append(f"  - {p['name']}")
+        if plantings:
+            for pt in plantings:
+                entry = f"  - {pt['name']}"
+                if pt["variety"]:
+                    entry += f" ({pt['variety']})"
+                if pt["quantity"]:
+                    entry += f": {pt['quantity']} plants"
+                lines.append(entry)
         else:
             lines.append("  (empty)")
         lines.append("")
@@ -107,23 +135,24 @@ def get_recent_activity() -> str:
     """Last 30 activities and observations, most recent first."""
     conn = get_connection()
 
-    # pull from both tables and interleave by timestamp
     activities = conn.execute(
-        """SELECT activity_type as type, a.description, a.timestamp,
+        """SELECT a.activity_type as type, a.description, a.timestamp,
                   p.name as plant, l.name as location
            FROM activities a
-           LEFT JOIN plants p ON a.plant_id = p.id
+           LEFT JOIN plantings pt ON a.planting_id = pt.id
+           LEFT JOIN plants p ON pt.plant_id = p.id
            LEFT JOIN locations l ON a.location_id = l.id
-           ORDER BY timestamp DESC LIMIT 30"""
+           ORDER BY a.timestamp DESC LIMIT 30"""
     ).fetchall()
 
     observations = conn.execute(
-        """SELECT 'observed' as type, observation as description, timestamp,
+        """SELECT 'observed' as type, o.observation as description, o.timestamp,
                   p.name as plant, l.name as location
            FROM observations o
-           LEFT JOIN plants p ON o.plant_id = p.id
+           LEFT JOIN plantings pt ON o.planting_id = pt.id
+           LEFT JOIN plants p ON pt.plant_id = p.id
            LEFT JOIN locations l ON o.location_id = l.id
-           ORDER BY timestamp DESC LIMIT 30"""
+           ORDER BY o.timestamp DESC LIMIT 30"""
     ).fetchall()
 
     combined = sorted(

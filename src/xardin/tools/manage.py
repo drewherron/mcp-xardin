@@ -2,7 +2,11 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
-from xardin.db.queries import find_plant, search_plants, resolve_location, add_adjacency
+from xardin.db.queries import (
+    find_plant, search_plants,
+    find_planting, search_plantings,
+    resolve_location, add_adjacency,
+)
 
 
 @mcp.tool()
@@ -39,7 +43,10 @@ def update_location(
             deleting historical data)
     sun_exposure: e.g. 'full sun', 'partial shade', 'full shade'
     size: e.g. '4x8 ft'
-    notes: free-form spatial or soil notes
+    notes: free-form spatial context — use for position relative to landmarks
+           ("by the front door", "against the north fence"), soil type, etc.
+           Prefer notes over creating a new location for descriptors like these.
+           The locations table is for ground or other soil containers.
     adjacent_to: location names near this one (additive; links are not removed)
     """
     conn = get_connection()
@@ -74,7 +81,8 @@ def update_location(
         linked = []
         for name in adjacent_to:
             adj_row = conn.execute(
-                "SELECT id, name FROM locations WHERE name = ? COLLATE NOCASE", (name,)
+                "SELECT id, name FROM locations WHERE name = ? COLLATE NOCASE AND active = 1",
+                (name,),
             ).fetchone()
             if adj_row:
                 add_adjacency(conn, loc_id, adj_row["id"])
@@ -95,40 +103,127 @@ def update_location(
 @mcp.tool()
 def add_plant(
     name: str,
-    location: Optional[str] = None,
     species: Optional[str] = None,
     variety: Optional[str] = None,
-    date_planted: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> str:
-    """Add a new plant to the garden. Location is matched by name or created automatically."""
+    """Register a plant type (species, variety). Call add_planting separately
+    for each location where it's growing.
+    """
     conn = get_connection()
+    cursor = conn.execute(
+        "INSERT INTO plants (name, species, variety, notes) VALUES (?, ?, ?, ?)",
+        (name, species, variety, notes),
+    )
+    conn.commit()
+    return f"Added plant '{name}' (id={cursor.lastrowid})"
+
+
+@mcp.tool()
+def add_planting(
+    plant: str,
+    location: Optional[str] = None,
+    quantity: Optional[int] = None,
+    date_planted: Optional[str] = None,
+    notes: Optional[str] = None,
+) -> str:
+    """Record a group of plants growing in a specific location.
+
+    Call add_plant first if this plant type isn't in the database yet.
+    quantity: number of individual plants in this group, if known
+    """
+    conn = get_connection()
+    plant_row = find_plant(conn, plant)
+    if not plant_row:
+        matches = search_plants(conn, plant)
+        if matches:
+            names = ", ".join(m["name"] for m in matches)
+            return f"Ambiguous: '{plant}' matches multiple plants: {names}"
+        return f"No plant found matching '{plant}' — call add_plant first"
+
     location_id = resolve_location(conn, location) if location else None
 
     cursor = conn.execute(
-        """INSERT INTO plants (name, species, variety, date_planted, location_id, active)
-           VALUES (?, ?, ?, ?, ?, 1)""",
-        (name, species, variety, date_planted, location_id),
+        """INSERT INTO plantings (plant_id, location_id, quantity, date_planted, notes)
+           VALUES (?, ?, ?, ?, ?)""",
+        (plant_row["id"], location_id, quantity, date_planted, notes),
     )
     conn.commit()
 
-    result = f"Added plant '{name}' (id={cursor.lastrowid})"
+    result = f"Added planting of '{plant_row['name']}' (id={cursor.lastrowid})"
     if location:
         result += f" in {location}"
+    if quantity:
+        result += f" ({quantity} plants)"
     return result
+
+
+@mcp.tool()
+def update_planting(
+    plant: str,
+    location: Optional[str] = None,
+    active: Optional[bool] = None,
+    quantity: Optional[int] = None,
+    date_planted: Optional[str] = None,
+    date_removed: Optional[str] = None,
+    notes: Optional[str] = None,
+) -> str:
+    """Update a specific planting's status, quantity, or dates.
+
+    If a plant has multiple active plantings in different locations, provide
+    location to identify which one.
+    Set active=false when plants are removed, die, or are fully harvested.
+    """
+    conn = get_connection()
+    planting = find_planting(conn, plant, location)
+    if not planting:
+        active_plantings = search_plantings(conn, plant)
+        if len(active_plantings) > 1:
+            locs = ", ".join(
+                conn.execute("SELECT name FROM locations WHERE id = ?", (p["location_id"],))
+                .fetchone()["name"]
+                for p in active_plantings
+                if p["location_id"]
+            )
+            return f"Ambiguous: '{plant}' has multiple active plantings ({locs}) — provide location"
+        return f"No active planting found for '{plant}'"
+
+    updates = {}
+    if active is not None:
+        updates["active"] = 1 if active else 0
+    if quantity is not None:
+        updates["quantity"] = quantity
+    if date_planted is not None:
+        updates["date_planted"] = date_planted
+    if date_removed is not None:
+        updates["date_removed"] = date_removed
+    if notes is not None:
+        updates["notes"] = notes
+
+    if not updates:
+        return "Nothing to update"
+
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [planting["id"]]
+    conn.execute(
+        f"UPDATE plantings SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        values,
+    )
+    conn.commit()
+
+    changed = ", ".join(f"{k}={v}" for k, v in updates.items())
+    plant_name = find_plant(conn, plant)["name"]
+    return f"Updated planting of '{plant_name}': {changed}"
 
 
 @mcp.tool()
 def update_plant(
     plant: str,
-    active: Optional[bool] = None,
-    location: Optional[str] = None,
-    notes: Optional[str] = None,
     species: Optional[str] = None,
     variety: Optional[str] = None,
-    date_planted: Optional[str] = None,
-    date_removed: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> str:
-    """Update an existing plant. Identify it by name or ID."""
+    """Update a plant type's species, variety, or notes."""
     conn = get_connection()
     existing = find_plant(conn, plant)
     if not existing:
@@ -139,25 +234,16 @@ def update_plant(
         return f"No plant found matching '{plant}'"
 
     updates = {}
-    if active is not None:
-        updates["active"] = 1 if active else 0
-    if location is not None:
-        updates["location_id"] = resolve_location(conn, location)
-    if notes is not None:
-        updates["notes"] = notes
     if species is not None:
         updates["species"] = species
     if variety is not None:
         updates["variety"] = variety
-    if date_planted is not None:
-        updates["date_planted"] = date_planted
-    if date_removed is not None:
-        updates["date_removed"] = date_removed
+    if notes is not None:
+        updates["notes"] = notes
 
     if not updates:
         return "Nothing to update"
 
-    # SET clause can only come from our hardcoded keys, not user input
     set_clause = ", ".join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [existing["id"]]
     conn.execute(
@@ -172,7 +258,7 @@ def update_plant(
 
 @mcp.tool()
 def get_plant_info(plant: str) -> str:
-    """Get details about a plant by name or ID."""
+    """Get details and history for a plant type, including all its plantings."""
     conn = get_connection()
     existing = find_plant(conn, plant)
     if not existing:
@@ -182,40 +268,54 @@ def get_plant_info(plant: str) -> str:
             return f"Ambiguous: '{plant}' matches multiple plants: {names}"
         return f"No plant found matching '{plant}'"
 
-    # resolve location name for display
-    location_name = None
-    if existing["location_id"]:
-        loc = conn.execute(
-            "SELECT name FROM locations WHERE id = ?", (existing["location_id"],)
-        ).fetchone()
-        if loc:
-            location_name = loc["name"]
-
     lines = [f"# {existing['name']}"]
-    lines.append(f"Active: {bool(existing['active'])}")
-    if location_name:
-        lines.append(f"Location: {location_name}")
     if existing["species"]:
         lines.append(f"Species: {existing['species']}")
     if existing["variety"]:
         lines.append(f"Variety: {existing['variety']}")
-    if existing["date_planted"]:
-        lines.append(f"Planted: {existing['date_planted']}")
-    if existing["date_removed"]:
-        lines.append(f"Removed: {existing['date_removed']}")
     if existing["notes"]:
         lines.append(f"Notes: {existing['notes']}")
 
-    # combined timeline from both tables
+    # list all plantings
+    plantings = conn.execute(
+        """SELECT pt.id, pt.active, pt.quantity, pt.date_planted, pt.date_removed,
+                  l.name as location
+           FROM plantings pt
+           LEFT JOIN locations l ON pt.location_id = l.id
+           WHERE pt.plant_id = ?
+           ORDER BY pt.active DESC, pt.date_planted""",
+        (existing["id"],),
+    ).fetchall()
+
+    if plantings:
+        lines.append("\n## Plantings")
+        for pt in plantings:
+            status = "active" if pt["active"] else "inactive"
+            parts = [f"- [{status}]"]
+            if pt["location"]:
+                parts.append(pt["location"])
+            if pt["quantity"]:
+                parts.append(f"{pt['quantity']} plants")
+            if pt["date_planted"]:
+                parts.append(f"planted {pt['date_planted']}")
+            if pt["date_removed"]:
+                parts.append(f"removed {pt['date_removed']}")
+            lines.append(" ".join(parts))
+
+    # combined activity/observation timeline across all plantings
     activities = conn.execute(
-        """SELECT activity_type as type, description, timestamp
-           FROM activities WHERE plant_id = ?""",
+        """SELECT a.activity_type as type, a.description, a.timestamp
+           FROM activities a
+           JOIN plantings pt ON a.planting_id = pt.id
+           WHERE pt.plant_id = ?""",
         (existing["id"],),
     ).fetchall()
     observations = conn.execute(
-        """SELECT 'observed' as type, observation as description,
-                  possible_cause, timestamp
-           FROM observations WHERE plant_id = ?""",
+        """SELECT 'observed' as type, o.observation as description,
+                  o.possible_cause, o.timestamp
+           FROM observations o
+           JOIN plantings pt ON o.planting_id = pt.id
+           WHERE pt.plant_id = ?""",
         (existing["id"],),
     ).fetchall()
 

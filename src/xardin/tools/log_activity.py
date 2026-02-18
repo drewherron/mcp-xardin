@@ -3,7 +3,7 @@ from typing import Optional
 
 from xardin.server import mcp
 from xardin.db import get_connection
-from xardin.db.queries import find_plant, search_plants, resolve_location
+from xardin.db.queries import find_planting, search_plantings, resolve_location
 
 
 @mcp.tool()
@@ -25,39 +25,41 @@ def log_activity(
     Use 'observed' for observations (e.g. wilting, pests, flowering).
     Set source to 'org_sync' when logging from sync_notes output.
 
-    If the activity implies a plant is finished (died, pulled out, or
-    final harvest of a once-and-done crop like carrots or garlic), also
-    call update_plant with active=false for that plant.
+    If a plant has multiple active plantings in different locations, provide
+    location to identify which one. If the activity implies a planting is
+    finished (died, pulled out, or final harvest of a once-and-done crop),
+    also call update_planting with active=false for that planting.
     """
     conn = get_connection()
     ts = timestamp or datetime.now().isoformat()
 
-    plant_id = None
-    ambiguous = False
-    if plant:
-        existing = find_plant(conn, plant)
-        if existing:
-            plant_id = existing["id"]
-        elif len(search_plants(conn, plant)) > 1:
-            ambiguous = True
-
+    planting_id = None
     location_id = None
-    if location:
+    ambiguous = False
+
+    if plant:
+        planting = find_planting(conn, plant, location)
+        if planting:
+            planting_id = planting["id"]
+            location_id = planting["location_id"]
+        elif search_plantings(conn, plant):
+            ambiguous = True
+    elif location:
         location_id = resolve_location(conn, location)
 
     if activity_type == "observed":
         conn.execute(
             """INSERT INTO observations
-               (plant_id, location_id, observation, possible_cause, timestamp, source)
+               (planting_id, location_id, observation, possible_cause, timestamp, source)
                VALUES (?, ?, ?, ?, ?, ?)""",
-            (plant_id, location_id, description, possible_cause, ts, source),
+            (planting_id, location_id, description, possible_cause, ts, source),
         )
     else:
         conn.execute(
             """INSERT INTO activities
-               (plant_id, location_id, activity_type, description, quantity, timestamp, source)
+               (planting_id, location_id, activity_type, description, quantity, timestamp, source)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (plant_id, location_id, activity_type, description, quantity, ts, source),
+            (planting_id, location_id, activity_type, description, quantity, ts, source),
         )
 
     conn.commit()
@@ -66,7 +68,10 @@ def log_activity(
     if plant:
         result += f" ({plant})"
     if ambiguous:
-        result += f" — note: '{plant}' matched multiple plants, logged without plant link"
+        result += (
+            f" — note: '{plant}' has multiple active plantings, logged without planting link;"
+            " provide location to link to a specific planting"
+        )
     return result
 
 

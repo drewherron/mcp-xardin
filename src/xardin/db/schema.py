@@ -23,10 +23,19 @@ CREATE TABLE IF NOT EXISTS plants (
     name TEXT NOT NULL,
     species TEXT,
     variety TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS plantings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_id INTEGER NOT NULL REFERENCES plants(id),
+    location_id INTEGER REFERENCES locations(id),
+    quantity INTEGER,           -- number of individual plants, if known
     date_planted DATE,
     date_removed DATE,
-    location_id INTEGER REFERENCES locations(id),
-    active INTEGER NOT NULL DEFAULT 1,  -- 1 = currently in ground, 0 = removed
+    active INTEGER NOT NULL DEFAULT 1,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,7 +43,7 @@ CREATE TABLE IF NOT EXISTS plants (
 
 CREATE TABLE IF NOT EXISTS activities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    plant_id INTEGER REFERENCES plants(id),
+    planting_id INTEGER REFERENCES plantings(id),
     location_id INTEGER REFERENCES locations(id),
     activity_type TEXT NOT NULL,  -- planted, fertilized, harvested, moved, etc.
     description TEXT NOT NULL,    -- original natural language text
@@ -47,7 +56,7 @@ CREATE TABLE IF NOT EXISTS activities (
 
 CREATE TABLE IF NOT EXISTS observations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    plant_id INTEGER REFERENCES plants(id),
+    planting_id INTEGER REFERENCES plantings(id),
     location_id INTEGER REFERENCES locations(id),
     observation TEXT NOT NULL,
     possible_cause TEXT,
