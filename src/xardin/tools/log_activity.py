@@ -23,7 +23,12 @@ def log_activity(
     harvested, moved, observed, treated, other.
 
     Use 'observed' for observations (e.g. wilting, pests, flowering).
+    possible_cause is only relevant for 'observed' entries.
     Set source to 'org_sync' when logging from sync_notes output.
+
+    quantity: free-text harvest or activity amount, e.g. '3 lbs' or '6 heads'.
+              This is not a plant count — use add_planting for that.
+    timestamp: ISO 8601 datetime string; defaults to now if omitted.
 
     If a plant has multiple active plantings in different locations, provide
     location to identify which one. If the activity implies a planting is

@@ -131,6 +131,9 @@ def add_planting(
 
     Call add_plant first if this plant type isn't in the database yet.
     quantity: number of individual plants in this group, if known
+
+    For seeds purchased but not yet started, add_plant alone is sufficient —
+    only call add_planting once there's a specific growing location.
     """
     conn = get_connection()
     plant_row = find_plant(conn, plant)

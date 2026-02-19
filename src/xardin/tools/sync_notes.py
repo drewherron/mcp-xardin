@@ -11,8 +11,9 @@ def sync_notes(file_path: str) -> str:
     """Sync garden notes from an org-mode file.
 
     Parses the file and returns any new or updated entries. The AI client
-    should interpret each entry (identify plants, activities, locations)
-    and call log_activity for each one.
+    should interpret each entry: registering new plants with add_plant,
+    creating plantings with add_planting, and logging events with
+    log_activity. Detailed instructions are included in the return value.
     """
     if not os.path.exists(file_path):
         return f"File not found: {file_path}"
