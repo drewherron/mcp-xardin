@@ -2,6 +2,8 @@ from xardin.tools.manage import (
     add_location,
     update_location,
     add_plant,
+    add_planting,
+    update_planting,
     update_plant,
     get_plant_info,
 )
@@ -77,7 +79,6 @@ def test_update_location_adjacency(db):
     ).fetchone()
     assert link is not None
 
-    # link is symmetric
     reverse = db.execute(
         "SELECT * FROM location_adjacency WHERE location_id = ? AND adjacent_id = ?",
         (b["id"], a["id"]),
@@ -110,51 +111,106 @@ def test_add_plant_basic(db):
 
     row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
     assert row["name"] == "cherry tomatoes"
+
+
+def test_add_plant_with_species(db):
+    result = add_plant("peppers", species="Capsicum annuum", variety="Jalapeño")
+    assert "peppers" in result
+
+    row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
+    assert row["species"] == "Capsicum annuum"
+    assert row["variety"] == "Jalapeño"
+
+
+def test_add_planting_basic(db):
+    add_plant("basil")
+    result = add_planting("basil")
+    assert "basil" in result
+
+    row = db.execute("SELECT * FROM plantings WHERE id = 1").fetchone()
+    assert row["plant_id"] == 1
     assert row["active"] == 1
 
 
-def test_add_plant_with_location(db):
-    result = add_plant("basil", location="porch")
-    assert "basil" in result
+def test_add_planting_with_location(db):
+    add_plant("basil")
+    result = add_planting("basil", location="porch")
     assert "porch" in result
 
-    # location should have been auto-created
-    loc = db.execute("SELECT * FROM locations").fetchone()
-    assert loc["name"] == "porch"
-
-    plant = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
-    assert plant["location_id"] == loc["id"]
+    loc = db.execute("SELECT * FROM locations WHERE name = 'porch'").fetchone()
+    planting = db.execute("SELECT * FROM plantings WHERE id = 1").fetchone()
+    assert planting["location_id"] == loc["id"]
 
 
-def test_add_plant_creates_new_location_when_inactive(db):
-    add_location("pot 5")
-    update_location("pot 5", active=False)
-    # adding a plant to a name with no active location creates a fresh one
-    add_plant("mint", location="pot 5")
+def test_add_planting_with_quantity(db):
+    add_plant("peppers")
+    result = add_planting("peppers", location="side yard", quantity=6)
+    assert "6 plants" in result
 
-    rows = db.execute("SELECT * FROM locations WHERE name = 'pot 5'").fetchall()
+    row = db.execute("SELECT * FROM plantings WHERE id = 1").fetchone()
+    assert row["quantity"] == 6
+
+
+def test_add_planting_unknown_plant(db):
+    result = add_planting("mystery plant")
+    assert "No plant found" in result
+
+
+def test_add_planting_multiple_locations(db):
+    add_plant("peppers")
+    add_planting("peppers", location="side yard", quantity=6)
+    add_planting("peppers", location="back yard", quantity=3)
+
+    rows = db.execute("SELECT * FROM plantings WHERE plant_id = 1").fetchall()
     assert len(rows) == 2
-    active = [r for r in rows if r["active"] == 1]
-    assert len(active) == 1
 
 
-def test_add_plant_reuses_existing_location(db):
-    add_location("raised bed")
-    add_plant("tomatoes", location="raised bed")
-    add_plant("kale", location="raised bed")
+def test_update_planting_active(db):
+    add_plant("basil")
+    add_planting("basil", location="porch")
+    result = update_planting("basil", active=False, date_removed="2026-09-01")
+    assert "Updated" in result
 
-    locations = db.execute("SELECT * FROM locations").fetchall()
-    assert len(locations) == 1
+    row = db.execute("SELECT * FROM plantings WHERE id = 1").fetchone()
+    assert row["active"] == 0
+    assert row["date_removed"] == "2026-09-01"
+
+
+def test_update_planting_with_location(db):
+    add_plant("peppers")
+    add_planting("peppers", location="side yard")
+    add_planting("peppers", location="back yard")
+    result = update_planting("peppers", location="side yard", quantity=5)
+    assert "Updated" in result
+
+    side = db.execute("SELECT id FROM locations WHERE name = 'side yard'").fetchone()
+    row = db.execute(
+        "SELECT * FROM plantings WHERE location_id = ?", (side["id"],)
+    ).fetchone()
+    assert row["quantity"] == 5
+
+
+def test_update_planting_ambiguous(db):
+    add_plant("peppers")
+    add_planting("peppers", location="side yard")
+    add_planting("peppers", location="back yard")
+    result = update_planting("peppers", active=False)
+    assert "Ambiguous" in result
+
+
+def test_update_planting_not_found(db):
+    result = update_planting("nonexistent")
+    assert "No active planting found" in result
 
 
 def test_update_plant(db):
     add_plant("basil")
-    result = update_plant("basil", active=False, notes="dried out")
+    result = update_plant("basil", variety="Genovese", notes="classic pesto basil")
     assert "Updated" in result
 
     row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
-    assert row["active"] == 0
-    assert row["notes"] == "dried out"
+    assert row["variety"] == "Genovese"
+    assert row["notes"] == "classic pesto basil"
 
 
 def test_update_plant_not_found(db):
@@ -162,19 +218,9 @@ def test_update_plant_not_found(db):
     assert "No plant found" in result
 
 
-def test_update_plant_change_location(db):
-    add_plant("pepper", location="porch")
-    update_plant("pepper", location="raised bed")
-
-    plant = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
-    loc = db.execute(
-        "SELECT name FROM locations WHERE id = ?", (plant["location_id"],)
-    ).fetchone()
-    assert loc["name"] == "raised bed"
-
-
 def test_get_plant_info(db):
-    add_plant("cherry tomatoes", location="raised bed", variety="Sun Gold")
+    add_plant("cherry tomatoes", variety="Sun Gold")
+    add_planting("cherry tomatoes", location="raised bed")
     result = get_plant_info("cherry tomatoes")
     assert "cherry tomatoes" in result
     assert "Sun Gold" in result
@@ -192,8 +238,20 @@ def test_get_plant_info_by_id(db):
     assert "basil" in result
 
 
+def test_get_plant_info_multiple_plantings(db):
+    add_plant("peppers")
+    add_planting("peppers", location="side yard", quantity=6)
+    add_planting("peppers", location="back yard", quantity=3)
+    result = get_plant_info("peppers")
+    assert "side yard" in result
+    assert "back yard" in result
+    assert "6" in result
+    assert "3" in result
+
+
 def test_get_plant_info_with_history(db):
-    add_plant("basil", location="porch")
+    add_plant("basil")
+    add_planting("basil", location="porch")
     log_activity("planted", "Planted basil", plant="basil", timestamp="2026-02-10T10:00:00")
     log_activity("observed", "Looking wilted", plant="basil", timestamp="2026-02-11T17:00:00",
                  possible_cause="overwatering")
@@ -206,7 +264,6 @@ def test_get_plant_info_with_history(db):
     assert "fertilized" in result
     assert "overwatering" in result
 
-    # should be in reverse chronological order
     fert_pos = result.index("fertilized")
     obs_pos = result.index("observed")
     plant_pos = result.index("planted")
