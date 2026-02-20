@@ -78,6 +78,27 @@ def test_inline_inactive_timestamp():
     assert entries[0].body == ""
 
 
+def test_date_only_property_timestamp():
+    # org-mode date picker without time: [2026-02-10 Tue]
+    text = "* Planted tomatoes\n:PROPERTIES:\n:CREATED:  [2026-02-10 Tue]\n:END:\n"
+    entries = parse_org_text(text)
+    assert entries[0].timestamp == "2026-02-10 Tue"
+
+
+def test_date_only_inline_active_timestamp():
+    text = "* Planted tomatoes\n  <2026-02-10 Tue>\n"
+    entries = parse_org_text(text)
+    assert entries[0].timestamp == "2026-02-10 Tue"
+    assert entries[0].body == ""
+
+
+def test_date_only_inline_inactive_timestamp():
+    text = "* Planted tomatoes\n  [2026-02-10 Tue]\n"
+    entries = parse_org_text(text)
+    assert entries[0].timestamp == "2026-02-10 Tue"
+    assert entries[0].body == ""
+
+
 def test_entry_without_timestamp():
     text = "* Just a note with no timestamp\n  some body text\n"
     entries = parse_org_text(text)

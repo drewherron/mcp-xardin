@@ -4,10 +4,10 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-# <2026-02-10 Tue 14:32> style (inline timestamps)
-ACTIVE_TS_RE = re.compile(r"<(\d{4}-\d{2}-\d{2} \w+ \d{2}:\d{2})>")
-# [2026-02-10 Tue 14:32] style (inactive, used in property drawers)
-INACTIVE_TS_RE = re.compile(r"\[(\d{4}-\d{2}-\d{2} \w+ \d{2}:\d{2})\]")
+# <2026-02-10 Tue 14:32> or <2026-02-10 Tue> style (inline timestamps)
+ACTIVE_TS_RE = re.compile(r"<(\d{4}-\d{2}-\d{2} \w+(?: \d{2}:\d{2})?)>")
+# [2026-02-10 Tue 14:32] or [2026-02-10 Tue] style (inactive, used in property drawers)
+INACTIVE_TS_RE = re.compile(r"\[(\d{4}-\d{2}-\d{2} \w+(?: \d{2}:\d{2})?)\]")
 
 PROPERTY_LINE_RE = re.compile(r"^\s*:(PROPERTIES|CREATED|END):", re.IGNORECASE)
 
