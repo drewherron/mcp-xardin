@@ -21,20 +21,16 @@ def get_schema() -> str:
 
 @mcp.resource("garden://plants")
 def get_plants() -> str:
-    """All plant types that have at least one active planting, with planting details."""
+    """All registered plant types with active planting details. Plants with no active
+    plantings are listed as catalog entries (e.g. seeds purchased but not yet started)."""
     conn = get_connection()
 
-    # get plant types with active plantings
     plants = conn.execute(
-        """SELECT DISTINCT p.id, p.name, p.species, p.variety
-           FROM plants p
-           JOIN plantings pt ON pt.plant_id = p.id
-           WHERE pt.active = 1
-           ORDER BY p.name"""
+        "SELECT id, name, species, variety FROM plants ORDER BY name"
     ).fetchall()
 
     if not plants:
-        return "No active plants."
+        return "No plants registered."
 
     lines = []
     for p in plants:
@@ -54,15 +50,18 @@ def get_plants() -> str:
             (p["id"],),
         ).fetchall()
 
-        for pt in plantings:
-            parts = [" -"]
-            if pt["location"]:
-                parts.append(pt["location"])
-            if pt["quantity"]:
-                parts.append(f"{pt['quantity']} plants")
-            if pt["date_planted"]:
-                parts.append(f"planted {pt['date_planted']}")
-            lines.append(" ".join(parts))
+        if plantings:
+            for pt in plantings:
+                parts = [" -"]
+                if pt["location"]:
+                    parts.append(pt["location"])
+                if pt["quantity"]:
+                    parts.append(f"{pt['quantity']} plants")
+                if pt["date_planted"]:
+                    parts.append(f"planted {pt['date_planted']}")
+                lines.append(" ".join(parts))
+        else:
+            lines.append("  (catalog only — not currently planted)")
 
         lines.append("")
 

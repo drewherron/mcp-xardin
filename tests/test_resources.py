@@ -17,7 +17,7 @@ def test_schema_resource(db):
 
 def test_plants_resource_empty(db):
     result = get_plants()
-    assert "No active plants" in result
+    assert "No plants registered" in result
 
 
 def test_plants_resource(db):
@@ -40,6 +40,16 @@ def test_plants_resource_with_quantity(db):
     assert "6 plants" in result
     assert "back yard" in result
     assert "3 plants" in result
+
+
+def test_plants_resource_catalog_only(db):
+    # plants added but not yet planted show as catalog entries
+    add_plant("carrots", variety="Nantes")
+    add_plant("dill")
+    result = get_plants()
+    assert "carrots (Nantes)" in result
+    assert "catalog only" in result
+    assert "dill" in result
 
 
 def test_plants_resource_hides_inactive_plantings(db):
