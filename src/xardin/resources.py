@@ -1,15 +1,19 @@
 from xardin.server import mcp
 from xardin.db import get_connection
 from xardin.db.schema import SCHEMA
-from xardin.config import GROWING_ZONE, REGION
+from xardin.config import GROWING_ZONE, REGION, LAST_FROST, FIRST_FROST
 
 
 @mcp.resource("garden://context")
 def get_context() -> str:
-    """Static garden configuration: growing zone and region."""
+    """Static garden configuration: growing zone, region, and frost dates."""
     lines = [f"Growing zone: {GROWING_ZONE}"]
     if REGION:
         lines.append(f"Region: {REGION}")
+    if LAST_FROST:
+        lines.append(f"Average last frost: {LAST_FROST}")
+    if FIRST_FROST:
+        lines.append(f"Average first frost: {FIRST_FROST}")
     return "\n".join(lines)
 
 
