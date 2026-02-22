@@ -3,7 +3,7 @@ import os
 from xardin.server import mcp
 from xardin.db import get_connection
 from xardin.ingestion.org_parser import parse_org_file
-from xardin.ingestion.sync import check_entry, record_sync
+from xardin.ingestion.sync import check_entry, content_hash, record_sync
 
 
 @mcp.tool()
@@ -13,7 +13,9 @@ def sync_notes(file_path: str) -> str:
     Parses the file and returns any new or updated entries. The AI client
     should interpret each entry: registering new plants with add_plant,
     creating plantings with add_planting, and logging events with
-    log_activity. Detailed instructions are included in the return value.
+    log_activity. After processing each entry, call mark_synced with the
+    entry's org_timestamp and sync_token to confirm it was handled.
+    Detailed instructions are included in the return value.
     """
     if not os.path.exists(file_path):
         return f"File not found: {file_path}"
@@ -35,18 +37,16 @@ def sync_notes(file_path: str) -> str:
             skipped += 1
             continue
 
-        record_sync(conn, entry.timestamp, entry.raw)
-
+        token = content_hash(entry.raw)
         item = f"[{entry.timestamp}] {entry.heading}"
         if entry.body:
             item += f"\n  {entry.body}"
+        item += f"\n  sync_token: {token}"
 
         if status == "new":
             new_entries.append(item)
         else:
             updated_entries.append(item)
-
-    conn.commit()
 
     # build the response
     parts = []
@@ -72,6 +72,23 @@ def sync_notes(file_path: str) -> str:
         "log_activity (or log_activities) for each entry, setting source='org_sync'. "
         "If any entries indicate that plants were removed, pulled out, died, or were "
         "fully harvested (once-and-done crops like carrots or garlic), also call "
-        "update_planting with active=false for those plantings."
+        "update_planting with active=false for those plantings. "
+        "After processing each entry, call mark_synced with the entry's org_timestamp "
+        "and sync_token so it won't be returned again on the next sync."
     )
     return "\n".join(parts)
+
+
+@mcp.tool()
+def mark_synced(org_timestamp: str, sync_token: str) -> str:
+    """Mark an org entry as processed after interpreting it from sync_notes output.
+
+    Call this once per entry after all add_plant, add_planting, and
+    log_activity calls for that entry are complete. Use the org_timestamp
+    and sync_token values returned by sync_notes. Set source='org_sync'
+    on any log_activity calls for this entry before calling mark_synced.
+    """
+    conn = get_connection()
+    record_sync(conn, org_timestamp, sync_token)
+    conn.commit()
+    return f"Marked {org_timestamp} as synced."
