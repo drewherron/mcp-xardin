@@ -2,9 +2,20 @@ from xardin.tools.manage import add_location, update_location, add_plant, add_pl
 from xardin.resources import get_context, get_schema, get_plants, get_locations
 
 
-def test_context_resource(db):
+def test_context_resource(db, monkeypatch):
+    import xardin.resources as res
+    monkeypatch.setattr(res, "GROWING_ZONE", "8b")
+    monkeypatch.setattr(res, "REGION", "Pacific Northwest")
     result = get_context()
-    assert "Growing zone" in result
+    assert "Growing zone: 8b" in result
+    assert "Pacific Northwest" in result
+
+
+def test_context_resource_empty(db):
+    import xardin.resources as res
+    result = get_context()
+    # with no env vars set, context is empty — should not error
+    assert isinstance(result, str)
 
 
 def test_schema_resource(db):

@@ -7,7 +7,9 @@ from xardin.config import GROWING_ZONE, REGION, LAST_FROST, FIRST_FROST
 @mcp.resource("garden://context")
 def get_context() -> str:
     """Static garden configuration: growing zone, region, and frost dates."""
-    lines = [f"Growing zone: {GROWING_ZONE}"]
+    lines = []
+    if GROWING_ZONE:
+        lines.append(f"Growing zone: {GROWING_ZONE}")
     if REGION:
         lines.append(f"Region: {REGION}")
     if LAST_FROST:
