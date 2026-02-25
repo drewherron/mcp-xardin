@@ -136,7 +136,9 @@ preserve historical data. If you later create a new location with the same name
 
 ## Org-mode workflow
 
-All entries in the Org file must be top-level headings; sub-headings are treated as body text and their timestamps are ignored. This would probably cause unwanted results. If you want to add clearly separate entries to the same note/timestamp, the LLM should create multiple entries using the same timestamp. Sometimes that doesn't matter at all: `plants` have no timestamp, so when I buy a bunch of seed packs I just list them all in one note, the AI gets each into the `plants` table on its own row.
+All entries in the Org file must be top-level headings (`* `). Sub-headings are treated as body text of their parent - their own timestamps are ignored. This is actually useful: you can structure a note with sub-headings as a list and the LLM will receive the whole thing as one entry. For example, a "Bought seeds" heading with `** Tomatoes` and `** Peppers` sub-headings will arrive as one entry, and the LLM can call `add_plant` for each. If you want clearly separate entries, use separate top-level headings with distinct timestamps.
+
+Top-level entries without a timestamp are skipped during import. If you need to record something without a meaningful date, (e.g., location information) just insert a random date.
 
 Re-importing the same file won't cause any issues, there's a built-in deduplication
 check by timestamp + content. Two entries with the same timestamp are treated as the
