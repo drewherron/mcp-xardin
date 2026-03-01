@@ -134,6 +134,13 @@ def add_planting(
 
     For seeds purchased but not yet started, add_plant alone is sufficient —
     only call add_planting once there's a specific growing location.
+
+    Before passing a location string, read garden://locations and check whether
+    the intended location already exists under a different name or description.
+    Locations often have no fixed name and may be referred to differently each
+    time (e.g. "Jane's window", "the bedroom window", "under the front
+    bedroom window" may all refer to the same row). Use the existing name if
+    there's a clear match; only treat it as new if no existing location fits.
     """
     conn = get_connection()
     plant_row = find_plant(conn, plant)

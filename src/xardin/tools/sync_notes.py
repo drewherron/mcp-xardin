@@ -66,15 +66,24 @@ def sync_notes(file_path: str) -> str:
         return "No new or updated entries found."
 
     parts.append(
-        "\n\nPlease interpret these entries. For any plants not already in the database, "
-        "call add_plant first (including species and variety if mentioned), then call "
-        "add_planting for each location group (with quantity if known). Then call "
-        "log_activity (or log_activities) for each entry, setting source='org_sync'. "
-        "If any entries indicate that plants were removed, pulled out, died, or were "
-        "fully harvested (once-and-done crops like carrots or garlic), also call "
-        "update_planting with active=false for those plantings. "
-        "After processing each entry, call mark_synced with the entry's org_timestamp "
-        "and sync_token so it won't be returned again on the next sync."
+        "\n\nPlease interpret these entries using the following steps:\n\n"
+        "1. Read garden://locations and garden://plants before processing any entry. "
+        "Use this to resolve location and plant references in the notes — do not pass "
+        "raw location strings directly to add_planting without first checking whether "
+        "an existing location matches. Locations may be referred to differently each "
+        "time (e.g. 'the bedroom window', 'Jane's window', 'under the front "
+        "bedroom' may all refer to the same location). Use the existing name when "
+        "there is a clear match; only create a new location if none fits.\n\n"
+        "2. For any plants not already in the database, call add_plant first "
+        "(including species and variety if mentioned).\n\n"
+        "3. Call add_planting for each location group (with quantity if known).\n\n"
+        "4. Call log_activity (or log_activities) for each entry, setting "
+        "source='org_sync'.\n\n"
+        "5. If any entries indicate that plants were removed, pulled out, died, or "
+        "were fully harvested (once-and-done crops like carrots or garlic), call "
+        "update_planting with active=false for those plantings.\n\n"
+        "6. After processing each entry, call mark_synced with the entry's "
+        "org_timestamp and sync_token so it won't be returned again on the next sync."
     )
     return "\n".join(parts)
 
