@@ -32,20 +32,20 @@ def test_plants_resource_empty(db):
 
 
 def test_plants_resource(db):
-    add_plant("basil", variety="Thai")
-    add_planting("basil", location="porch")
+    add_plant("Thai Basil", type="Basil")
+    add_planting("Thai Basil", location="porch")
     add_plant("tomatoes")
     add_planting("tomatoes", location="raised bed")
     result = get_plants()
-    assert "basil (Thai)" in result
+    assert "Thai Basil" in result
     assert "porch" in result
     assert "tomatoes" in result
 
 
 def test_plants_resource_with_quantity(db):
-    add_plant("peppers")
-    add_planting("peppers", location="side yard", quantity=6)
-    add_planting("peppers", location="back yard", quantity=3)
+    add_plant("Jalapeño", type="Pepper")
+    add_planting("Jalapeño", location="side yard", quantity=6)
+    add_planting("Jalapeño", location="back yard", quantity=3)
     result = get_plants()
     assert "side yard" in result
     assert "6 plants" in result
@@ -55,10 +55,10 @@ def test_plants_resource_with_quantity(db):
 
 def test_plants_resource_catalog_only(db):
     # plants added but not yet planted show as catalog entries
-    add_plant("carrots", variety="Nantes")
+    add_plant("Nantes", type="Carrot")
     add_plant("dill")
     result = get_plants()
-    assert "carrots (Nantes)" in result
+    assert "Nantes" in result
     assert "catalog only" in result
     assert "dill" in result
 

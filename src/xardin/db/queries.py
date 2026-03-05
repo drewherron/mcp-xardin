@@ -23,10 +23,10 @@ def find_plant(conn, plant: str) -> Optional[dict]:
 
 
 def search_plants(conn, query: str) -> list[dict]:
-    """Partial name search — returns plant types whose name contains query."""
+    """Partial search — returns plant types whose name or type contains query."""
     rows = conn.execute(
-        "SELECT * FROM plants WHERE name LIKE ? COLLATE NOCASE",
-        (f"%{query}%",),
+        "SELECT * FROM plants WHERE name LIKE ? COLLATE NOCASE OR type LIKE ? COLLATE NOCASE",
+        (f"%{query}%", f"%{query}%"),
     ).fetchall()
     return [dict(r) for r in rows]
 

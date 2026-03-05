@@ -103,17 +103,20 @@ def update_location(
 @mcp.tool()
 def add_plant(
     name: str,
-    species: Optional[str] = None,
-    variety: Optional[str] = None,
+    type: Optional[str] = None,
     notes: Optional[str] = None,
 ) -> str:
-    """Register a plant type (species, variety). Call add_planting separately
-    for each location where it's growing.
+    """Register a plant. Call add_planting separately for each growing location.
+
+    name: the specific identifying name — cultivar if known ('Cherokee Purple',
+          'Genovese'), common name otherwise ('Mustard Greens', 'Lemon Balm')
+    type: broad plant category ('Tomato', 'Basil', 'Herb') — omit if name
+          already serves as the category (e.g. name='Mustard Greens', no type needed)
     """
     conn = get_connection()
     cursor = conn.execute(
-        "INSERT INTO plants (name, species, variety, notes) VALUES (?, ?, ?, ?)",
-        (name, species, variety, notes),
+        "INSERT INTO plants (name, type, notes) VALUES (?, ?, ?)",
+        (name, type, notes),
     )
     conn.commit()
     return f"Added plant '{name}' (id={cursor.lastrowid})"
@@ -229,11 +232,10 @@ def update_planting(
 @mcp.tool()
 def update_plant(
     plant: str,
-    species: Optional[str] = None,
-    variety: Optional[str] = None,
+    type: Optional[str] = None,
     notes: Optional[str] = None,
 ) -> str:
-    """Update a plant type's species, variety, or notes."""
+    """Update a plant's type or notes."""
     conn = get_connection()
     existing = find_plant(conn, plant)
     if not existing:
@@ -244,10 +246,8 @@ def update_plant(
         return f"No plant found matching '{plant}'"
 
     updates = {}
-    if species is not None:
-        updates["species"] = species
-    if variety is not None:
-        updates["variety"] = variety
+    if type is not None:
+        updates["type"] = type
     if notes is not None:
         updates["notes"] = notes
 
@@ -278,11 +278,10 @@ def get_plant_info(plant: str) -> str:
             return f"Ambiguous: '{plant}' matches multiple plants: {names}"
         return f"No plant found matching '{plant}'"
 
-    lines = [f"# {existing['name']}"]
-    if existing["species"]:
-        lines.append(f"Species: {existing['species']}")
-    if existing["variety"]:
-        lines.append(f"Variety: {existing['variety']}")
+    header = existing["name"]
+    if existing["type"]:
+        header = f"{existing['type']} — {header}"
+    lines = [f"# {header}"]
     if existing["notes"]:
         lines.append(f"Notes: {existing['notes']}")
 

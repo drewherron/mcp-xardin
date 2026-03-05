@@ -113,13 +113,13 @@ def test_add_plant_basic(db):
     assert row["name"] == "cherry tomatoes"
 
 
-def test_add_plant_with_species(db):
-    result = add_plant("peppers", species="Capsicum annuum", variety="Jalapeño")
-    assert "peppers" in result
+def test_add_plant_with_type(db):
+    result = add_plant("Jalapeño", type="Pepper")
+    assert "Jalapeño" in result
 
     row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
-    assert row["species"] == "Capsicum annuum"
-    assert row["variety"] == "Jalapeño"
+    assert row["name"] == "Jalapeño"
+    assert row["type"] == "Pepper"
 
 
 def test_add_planting_basic(db):
@@ -205,11 +205,11 @@ def test_update_planting_not_found(db):
 
 def test_update_plant(db):
     add_plant("basil")
-    result = update_plant("basil", variety="Genovese", notes="classic pesto basil")
+    result = update_plant("basil", type="Herb", notes="classic pesto basil")
     assert "Updated" in result
 
     row = db.execute("SELECT * FROM plants WHERE id = 1").fetchone()
-    assert row["variety"] == "Genovese"
+    assert row["type"] == "Herb"
     assert row["notes"] == "classic pesto basil"
 
 
@@ -219,11 +219,11 @@ def test_update_plant_not_found(db):
 
 
 def test_get_plant_info(db):
-    add_plant("cherry tomatoes", variety="Sun Gold")
-    add_planting("cherry tomatoes", location="raised bed")
-    result = get_plant_info("cherry tomatoes")
-    assert "cherry tomatoes" in result
+    add_plant("Sun Gold", type="Tomato")
+    add_planting("Sun Gold", location="raised bed")
+    result = get_plant_info("Sun Gold")
     assert "Sun Gold" in result
+    assert "Tomato" in result
     assert "raised bed" in result
 
 

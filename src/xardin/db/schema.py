@@ -20,9 +20,8 @@ CREATE TABLE IF NOT EXISTS location_adjacency (
 
 CREATE TABLE IF NOT EXISTS plants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    species TEXT,
-    variety TEXT,
+    name TEXT NOT NULL,  -- specific identifying name: 'Cherokee Purple', 'Genovese', 'Mustard Greens'
+    type TEXT,           -- plant category, if applicable: 'Tomato', 'Basil', 'Carrot'
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

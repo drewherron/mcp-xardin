@@ -32,20 +32,22 @@ def get_plants() -> str:
     conn = get_connection()
 
     plants = conn.execute(
-        "SELECT id, name, species, variety FROM plants ORDER BY name"
+        "SELECT id, name, type FROM plants ORDER BY type NULLS LAST, name"
     ).fetchall()
 
     if not plants:
         return "No plants registered."
 
     lines = []
+    current_type = "__unset__"
     for p in plants:
-        header = p["name"]
-        if p["variety"]:
-            header += f" ({p['variety']})"
-        elif p["species"]:
-            header += f" ({p['species']})"
-        lines.append(header)
+        plant_type = p["type"] or ""
+        if plant_type != current_type:
+            current_type = plant_type
+            if plant_type:
+                lines.append(f"{plant_type}:")
+        indent = "  " if plant_type else ""
+        lines.append(f"{indent}{p['name']}")
 
         plantings = conn.execute(
             """SELECT pt.quantity, pt.date_planted, l.name as location
@@ -58,7 +60,7 @@ def get_plants() -> str:
 
         if plantings:
             for pt in plantings:
-                parts = [" -"]
+                parts = [f"{indent} -"]
                 if pt["location"]:
                     parts.append(pt["location"])
                 if pt["quantity"]:
@@ -67,7 +69,7 @@ def get_plants() -> str:
                     parts.append(f"planted {pt['date_planted']}")
                 lines.append(" ".join(parts))
         else:
-            lines.append("  (catalog only — not currently planted)")
+            lines.append(f"{indent}  (catalog only — not currently planted)")
 
         lines.append("")
 
@@ -114,7 +116,7 @@ def get_locations() -> str:
             lines.append(f"  Adjacent to: {', '.join(r['name'] for r in adjacent)}")
 
         plantings = conn.execute(
-            """SELECT p.name, p.variety, pt.quantity
+            """SELECT p.name, p.type, pt.quantity
                FROM plantings pt
                JOIN plants p ON pt.plant_id = p.id
                WHERE pt.location_id = ? AND pt.active = 1""",
@@ -123,10 +125,10 @@ def get_locations() -> str:
         if plantings:
             for pt in plantings:
                 entry = f"  - {pt['name']}"
-                if pt["variety"]:
-                    entry += f" ({pt['variety']})"
+                if pt["type"]:
+                    entry = f"  - {pt['type']}: {pt['name']}"
                 if pt["quantity"]:
-                    entry += f": {pt['quantity']} plants"
+                    entry += f" ({pt['quantity']} plants)"
                 lines.append(entry)
         else:
             lines.append("  (empty)")
