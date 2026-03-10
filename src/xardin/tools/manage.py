@@ -114,6 +114,11 @@ def add_plant(
           already serves as the category (e.g. name='Mustard Greens', no type needed)
     """
     conn = get_connection()
+    existing = conn.execute(
+        "SELECT id FROM plants WHERE name = ? COLLATE NOCASE", (name,)
+    ).fetchone()
+    if existing:
+        return f"Plant '{name}' already exists (id={existing['id']})"
     cursor = conn.execute(
         "INSERT INTO plants (name, type, notes) VALUES (?, ?, ?)",
         (name, type, notes),
@@ -154,7 +159,10 @@ def add_planting(
             return f"Ambiguous: '{plant}' matches multiple plants: {names}"
         return f"No plant found matching '{plant}' — call add_plant first"
 
-    location_id = resolve_location(conn, location) if location else None
+    location_id = None
+    location_created = False
+    if location:
+        location_id, location_created = resolve_location(conn, location)
 
     cursor = conn.execute(
         """INSERT INTO plantings (plant_id, location_id, quantity, date_planted, notes)
@@ -165,7 +173,9 @@ def add_planting(
 
     result = f"Added planting of '{plant_row['name']}' (id={cursor.lastrowid})"
     if location:
-        result += f" in {location}"
+        result += f" in '{location}'"
+        if location_created:
+            result += " (new location created — verify spelling if this was meant to match an existing one)"
     if quantity:
         result += f" ({quantity} plants)"
     return result

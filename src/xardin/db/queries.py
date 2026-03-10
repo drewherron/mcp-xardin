@@ -85,14 +85,17 @@ def add_adjacency(conn, location_id: int, adjacent_id: int):
     )
 
 
-def resolve_location(conn, location: str) -> int:
-    """Look up an active location by name, creating a new one if none exists."""
+def resolve_location(conn, location: str) -> tuple[int, bool]:
+    """Look up an active location by name, creating a new one if none exists.
+
+    Returns (location_id, created) where created=True if a new location was inserted.
+    """
     row = conn.execute(
         "SELECT id FROM locations WHERE name = ? COLLATE NOCASE AND active = 1", (location,)
     ).fetchone()
     if row:
-        return row["id"]
+        return row["id"], False
     cursor = conn.execute(
         "INSERT INTO locations (name) VALUES (?)", (location,)
     )
-    return cursor.lastrowid
+    return cursor.lastrowid, True

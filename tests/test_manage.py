@@ -113,6 +113,14 @@ def test_add_plant_basic(db):
     assert row["name"] == "cherry tomatoes"
 
 
+def test_add_plant_duplicate(db):
+    add_plant("basil")
+    result = add_plant("basil")
+    assert "already exists" in result
+    rows = db.execute("SELECT * FROM plants WHERE name = 'basil'").fetchall()
+    assert len(rows) == 1
+
+
 def test_add_plant_with_type(db):
     result = add_plant("Jalapeño", type="Pepper")
     assert "Jalapeño" in result

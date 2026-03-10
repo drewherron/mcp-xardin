@@ -50,7 +50,7 @@ def log_activity(
         elif search_plantings(conn, plant):
             ambiguous = True
     elif location:
-        location_id = resolve_location(conn, location)
+        location_id, _ = resolve_location(conn, location)
 
     if activity_type == "observed":
         conn.execute(
